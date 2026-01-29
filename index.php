@@ -28,7 +28,7 @@ function createUptimeGrid($uptime)
         $percent = (float) $day['uptime_percent'];
         $color = getUptimeColor($percent);
 
-        $ret .= '<div class="uptime-day" style="background-color: $color" data-uptime="$percent" data-day="' . ($index + 1) . '"></div>';
+        $ret .= '<div class="uptime-day" style="background-color: '.$color.'" data-uptime="'.$percent.'" data-day="' . ($index + 1) . '"></div>';
         $index++;
     }
     $ret .= "</div>";
