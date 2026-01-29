@@ -9,11 +9,11 @@ function getUptimeColor($percentage)
     } else if ($percentage >= 50) {
         // Yellow to green range
         $ratio = ($percentage - 50) / 25;
-        return 'rgb(255, 255, ' . floor($ratio * 255);
+        return 'rgb(255, 255, ' . floor($ratio * 255) . ')';
     } else if ($percentage > 0) {
         // Red to yellow range
         $ratio = $percentage / 50;
-        return 'rgb(255, ' . floor($ratio * 255);
+        return 'rgb(255, ' . floor($ratio * 255) . ', 0)';
     } else {
         // Pure red for 0%
         return 'rgb(255, 0, 0)';
@@ -28,7 +28,7 @@ function createUptimeGrid($uptime)
         $percent = (float) $day['uptime_percent'];
         $color = getUptimeColor($percent);
 
-        $ret .= '<div class="uptime-day" style="background-color: '.$color.'" data-uptime="'.$percent.'" data-day="' . ($index + 1) . '"></div>';
+        $ret .= '<div class="uptime-day" style="background-color: ' . $color . '" data-uptime="' . $percent . '" data-day="' . ($index + 1) . '"></div>';
         $index++;
     }
     $ret .= "</div>";
@@ -47,7 +47,7 @@ function fetchUptime(PDO $db, int $serverId, int $days): array
          WHERE server_id = :server_id
            AND time >= datetime('now', :interval)
          GROUP BY date(time)
-         ORDER BY day ASC"
+         ORDER BY day DESC"
     );
 
     $stmt->execute([
@@ -115,7 +115,7 @@ function generateServerGrid()
         $statusText = $isOnline ? 'Online' : 'Offline';
 
         echo '
-    <div class="server-card" data-server-id="'.$serverId.'">
+    <div class="server-card" data-server-id="' . $serverId . '">
         <div class="card-header">
             <div class="status-indicator ' . $statusClass . '" title="' . $statusText . '"></div>
             <img src="' . $serverIcon . '" alt="' . $serverName . '" class="server-icon" data-discord="' . $serverDiscord . '">
