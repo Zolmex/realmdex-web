@@ -1,4 +1,3 @@
-// Event Handlers
 $(document).on('click', '.server-icon', function () {
     const discordUrl = $(this).data('discord');
     window.open(discordUrl, '_blank');
