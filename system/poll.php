@@ -19,7 +19,7 @@ $insert = $db->prepare(
 
 foreach ($servers as $server) {
     $host = $server['host'];
-    $url = "http://$host/realmdex/stats";
+    $url = "$host"; // Host includes the API endpoint for more flexibility
 
     $online = 0;
     $players = 0;
