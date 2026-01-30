@@ -13,13 +13,13 @@ $servers = $db->query(
 
 $insert = $db->prepare(
     "INSERT INTO server_polls
-     (server_id, online, players, time)
-     VALUES (?, ?, ?, datetime('now'))"
+     (server_id, online, players)
+     VALUES (?, ?, ?)"
 );
 
 foreach ($servers as $server) {
     $host = $server['host'];
-    $url = "http://$host/status";
+    $url = "http://$host/realmdex/stats";
 
     $online = 0;
     $players = 0;
@@ -36,10 +36,8 @@ foreach ($servers as $server) {
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
         if ($response !== false && $httpCode === 200) {
-            $data = json_decode($response, true);
-
             $online = 1;
-            $players = $data['players'];
+            $players = (int) $response;
         }
 
         curl_close($ch);
