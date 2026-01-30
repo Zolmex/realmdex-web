@@ -80,8 +80,7 @@ input {
 .server-grid-container {
   padding: 20px;
   max-width: 1400px;
-  margin-left: 30px;
-  margin-right: 30px;
+  margin: 0 auto;
 }
 
 #server-grid {
