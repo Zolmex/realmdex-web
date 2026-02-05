@@ -1,0 +1,25 @@
+# Dependencies
+/vendor/
+
+# Database and Data
+/data/
+*.db
+*.sqlite
+
+# Configuration
+.env
+.env.local
+.env.auth
+
+# Docker
+.docker/
+
+# Assets (if you want to ignore compiled CSS but keep SCSS)
+# /styles/*.css
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
