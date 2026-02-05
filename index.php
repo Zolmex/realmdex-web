@@ -61,7 +61,7 @@ function fetchUptime(PDO $db, int $serverId, int $days): array
 function generateServerGrid()
 {
     global $db;
-    $dbPath = '/opt/uptime/uptime.db';
+    $dbPath = getenv('DB_PATH') ?: '/var/www/html/data/uptime.db';
     $db = new PDO("sqlite:$dbPath");
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
