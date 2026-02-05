@@ -61,7 +61,7 @@ function fetchUptime(PDO $db, int $serverId, int $days): array
 function generateServerGrid()
 {
     global $db;
-    $dbPath = '/opt/uptime/uptime.db';
+    $dbPath = getenv('DB_PATH') ?: '/var/www/html/data/uptime.db';
     $db = new PDO("sqlite:$dbPath");
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
@@ -152,9 +152,39 @@ function generateServerGrid()
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/styles/index.css">
-    <title>RealmDex PServer Stats</title>
+    
+    <!-- Primary Meta Tags -->
+    <title>RealmDex - RotMG Private Server Stats & Uptime</title>
+    <meta name="title" content="RealmDex - RotMG Private Server Stats & Uptime">
+    <meta name="description" content="RealmDex is the home of the RotMG private servers community. Track server status, player counts, and uptime for all major Realm of the Mad God private servers.">
+    <meta name="keywords" content="RealmDex, RotMG, Realm of the Mad God, private servers, server stats, uptime, Valor, pserver">
+    <meta name="author" content="RealmDex">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://realmdex.com/">
+    <meta property="og:title" content="RealmDex - RotMG Private Server Stats & Uptime">
+    <meta property="og:description" content="RealmDex is the home of the RotMG private servers community">
+    <meta property="og:image" content="https://realmdex.com/content/images/logo.webp">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://realmdex.com/">
+    <meta property="twitter:title" content="RealmDex - RotMG Private Server Stats & Uptime">
+    <meta property="twitter:description" content="RealmDex is the home of the RotMG private servers community">
+    <meta property="twitter:image" content="https://realmdex.com/content/images/logo.webp">
+    
+    <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/content/images/logo.webp">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://realmdex.com/">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="/styles/index.css">
+    
+    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-4.0.0.js" integrity="sha256-9fsHeVnKBvqh3FB2HYu7g2xseAZ5MlN6Kz/qnkASV8U=" crossorigin="anonymous"></script>
 </head>
 

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-$dbPath = '/opt/uptime/uptime.db';
+$dbPath = getenv('DB_PATH') ?: '/var/www/html/data/uptime.db';
 $timeoutSeconds = 10;
 
 $db = new PDO("sqlite:$dbPath");
