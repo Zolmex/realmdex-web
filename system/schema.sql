@@ -23,3 +23,6 @@ CREATE TABLE server_polls (
 
 CREATE INDEX idx_server_polls_server_time
 ON server_polls(server_id, time);
+
+ALTER TABLE servers
+ADD COLUMN is_wip INTEGER DEFAULT 0;

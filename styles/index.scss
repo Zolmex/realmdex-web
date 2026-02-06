@@ -27,10 +27,19 @@
 }
 
 .card-header {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 65% 10%;
     align-items: center;
-    gap: 15px;
+    gap: 10px;
     margin-bottom: 15px;
+}
+
+.status-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
 }
 
 .status-indicator {
@@ -48,6 +57,29 @@
         background-color: #F44336;
         box-shadow: 0 0 8px #F44336;
     }
+
+    &.wip {
+        background-color: #f4e736;
+        box-shadow: 0 0 8px #f4e736;
+    }
+}
+
+.status-text {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    
+    &.online {
+        color: #4CAF50;
+    }
+
+    &.offline {
+        color: #F44336;
+    }
+
+    &.wip {
+        color: #f4e736;
+    }
 }
 
 .server-icon {
@@ -63,11 +95,30 @@
     }
 }
 
-.server-name {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0;
-    flex: 1;
+.server-info {
+    display: flex;
+    flex-direction: column;
+
+    .server-name {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0;
+        flex: 1;
+    }
+    
+    a.server-discord {
+        font-size: 85%;
+        color: #4952b4;  // Discord blue color
+        text-decoration: underline;
+        cursor: pointer;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        
+        &:hover {
+            color: #4752C4;  // Darker blue on hover
+        }
+    }
 }
 
 .card-stats {
