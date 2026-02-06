@@ -75,6 +75,7 @@ function generateServerGrid()
         $serverName = $server['name'];
         $serverIcon = $server['icon_path'];
         $serverDiscord = $server['discord_link'];
+        $isWIP = $server['is_wip'];
 
         $uptime = fetchUptime($db, $serverId, 7);
         $uptimeExtended = fetchUptime($db, $serverId, 14);
@@ -111,34 +112,44 @@ function generateServerGrid()
         $serverPlayers = $serverPlayers !== null ? (int) $serverPlayers : 0;
         $isOnline = $row ? $row['online'] : false;
 
-        $statusClass = $isOnline ? 'online' : 'offline';
-        $statusText = $isOnline ? 'Online' : 'Offline';
+        $statusClass = $isWIP ? 'wip' : ($isOnline ? 'online' : 'offline');
+        $statusText = $isWIP ? 'WIP' : ($isOnline ? 'Online' : 'Offline');
 
         echo '
     <div class="server-card" data-server-id="' . $serverId . '">
         <div class="card-header">
-            <div class="status-indicator ' . $statusClass . '" title="' . $statusText . '"></div>
             <img src="' . $serverIcon . '" alt="' . $serverName . '" class="server-icon" data-discord="' . $serverDiscord . '">
-            <h3 class="server-name">' . $serverName . '</h3>
+            <div class="server-info">
+                <h3 class="server-name">' . $serverName . '</h3>
+                <a href="' . $serverDiscord . '" class="server-discord" target="_blank" rel="noopener noreferrer">' . $serverDiscord . '</a>
+            </div>
+            <div class="status-container">
+                <div class="status-indicator ' . $statusClass . '" title="' . $statusText . '"></div>
+                <span class="status-text ' . $statusClass . '">' . $statusText . '</span>
+            </div>
         </div>
 
         <div class="card-stats">
             <div class="stat-row">
                 <span class="stat-label">Players</span>
-                <span class="stat-value">' . $serverPlayers . '</span>
+                <span class="stat-value">' . ($isWIP ? '-' : $serverPlayers) . '</span>
             </div>
             <div class="stat-row">
                 <span class="stat-label">24h Peak</span>
-                <span class="stat-value">' . $server24hPeak . '</span>
+                <span class="stat-value">' . ($isWIP ? '-' : $server24hPeak) . '</span>
             </div>
         </div>
 
-        <div class="uptime-section">
+        '.
+        ($isWIP ? '' : 
+        '<div class="uptime-section">
             <div class="uptime-label">Uptime (Past Week)</div>
 ' . createUptimeGrid($uptime) . '<div class="uptime-extended">
                 <div class="uptime-label">Uptime (Past 2 Weeks)</div>
 ' . createUptimeGrid($uptimeExtended) . '</div>
-        </div>
+        </div>'
+        )
+        .'
     </div>
 ';
     }

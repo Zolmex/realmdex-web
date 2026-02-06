@@ -111,14 +111,31 @@ input {
 }
 
 .card-header {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
+  display: -ms-grid;
+  display: grid;
+  -ms-grid-columns: auto 65% 10%;
+      grid-template-columns: auto 65% 10%;
   -webkit-box-align: center;
       -ms-flex-align: center;
           align-items: center;
-  gap: 15px;
+  gap: 10px;
   margin-bottom: 15px;
+}
+
+.status-container {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  gap: 5px;
+  -ms-flex-negative: 0;
+      flex-shrink: 0;
 }
 
 .status-indicator {
@@ -141,6 +158,30 @@ input {
           box-shadow: 0 0 8px #F44336;
 }
 
+.status-indicator.wip {
+  background-color: #f4e736;
+  -webkit-box-shadow: 0 0 8px #f4e736;
+          box-shadow: 0 0 8px #f4e736;
+}
+
+.status-text {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-text.online {
+  color: #4CAF50;
+}
+
+.status-text.offline {
+  color: #F44336;
+}
+
+.status-text.wip {
+  color: #f4e736;
+}
+
 .server-icon {
   width: 50px;
   height: 50px;
@@ -159,13 +200,37 @@ input {
           transform: scale(1.1);
 }
 
-.server-name {
+.server-info {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+      -ms-flex-direction: column;
+          flex-direction: column;
+}
+
+.server-info .server-name {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
   -webkit-box-flex: 1;
       -ms-flex: 1;
           flex: 1;
+}
+
+.server-info a.server-discord {
+  font-size: 85%;
+  color: #4952b4;
+  text-decoration: underline;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.server-info a.server-discord:hover {
+  color: #4752C4;
 }
 
 .card-stats {
