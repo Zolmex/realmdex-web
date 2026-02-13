@@ -20,6 +20,11 @@ body {
   font-family: $text-font;
   color: $text-color;
   background-color: $background-color;
+  background-image: linear-gradient(rgba(26, 20, 31, 0.75), rgba(26, 20, 31, 0.85)), 
+                    $background-image;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
 }
 
 img {
