@@ -3,8 +3,6 @@ $(document).on('click', '.server-icon', function () {
     window.open(discordUrl, '_blank');
 });
 
-// Uptime tooltip
-let tooltipTimeout;
 $(document).on('mouseenter', '.uptime-day', function (e) {
     const uptime = $(this).data('uptime');
     const day = $(this).data('day');
@@ -23,18 +21,4 @@ $(document).on('mouseenter', '.uptime-day', function (e) {
 
 $(document).on('mouseleave', '.uptime-day', function () {
     $('.uptime-tooltip').remove();
-});
-
-// Show extended uptime on card hover
-$(document).on('mouseenter', '.server-card', function () {
-    clearTimeout(tooltipTimeout);
-    const $extended = $(this).find('.uptime-extended');
-    tooltipTimeout = setTimeout(() => {
-        $extended.slideDown(200);
-    }, 500); // Show after 500ms hover
-});
-
-$(document).on('mouseleave', '.server-card', function () {
-    clearTimeout(tooltipTimeout);
-    $(this).find('.uptime-extended').slideUp(200);
 });
