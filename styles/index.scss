@@ -18,12 +18,11 @@
     border-radius: 8px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
+}
 
-    &:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-    }
+.server-card:has(.status-indicator.offline),
+.server-card:has(.status-indicator.wip) {
+    opacity: 0.55;
 }
 
 .card-header {
@@ -68,7 +67,7 @@
     font-size: 9px;
     font-weight: 600;
     text-transform: uppercase;
-    
+
     &.online {
         color: #4CAF50;
     }
@@ -105,18 +104,17 @@
         margin: 0;
         flex: 1;
     }
-    
+
     a.server-discord {
-        font-size: 85%;
-        color: #4952b4;  // Discord blue color
-        text-decoration: underline;
+        font-size: 11px;
+        color: rgb(160, 165, 220);
+        letter-spacing: 0.3px;
+        text-decoration: none;
+        opacity: 0.7;
         cursor: pointer;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100%;
-        
+
         &:hover {
-            color: #4752C4;  // Darker blue on hover
+            opacity: 1;
         }
     }
 }
@@ -164,7 +162,6 @@
 }
 
 .uptime-day {
-    width: 20px;
     height: 20px;
     border-radius: 3px;
     cursor: pointer;
@@ -193,13 +190,97 @@
     }
 }
 
-.uptime-extended {
-    display: none;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+.uptime-wrapper {
+    .uptime-labels {
+        display: grid;
 
-    .uptime-grid {
-        flex-wrap: wrap;
+        .uptime-label-week,
+        .uptime-label-2week {
+            grid-row: 1;
+            grid-column: 1;
+            transition: opacity 0.2s ease;
+        }
+
+        .uptime-label-2week {
+            opacity: 0;
+        }
+    }
+
+    .uptime-grids {
+        display: grid;
+
+        .uptime-week,
+        .uptime-2week {
+            grid-row: 1;
+            grid-column: 1;
+            transition: opacity 0.2s ease;
+        }
+
+        .uptime-week .uptime-day {
+            width: 20px;
+        }
+
+        .uptime-2week {
+            opacity: 0;
+            pointer-events: none;
+
+            .uptime-grid {
+                gap: 2px;
+            }
+
+            .uptime-day {
+                width: 10px;
+            }
+        }
+    }
+
+    &:hover {
+        .uptime-labels {
+            .uptime-label-week {
+                opacity: 0;
+            }
+            .uptime-label-2week {
+                opacity: 1;
+            }
+        }
+
+        .uptime-grids {
+            .uptime-week {
+                opacity: 0;
+                pointer-events: none;
+            }
+            .uptime-2week {
+                opacity: 1;
+                pointer-events: auto;
+            }
+        }
+    }
+}
+
+.wip-divider {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 10px 0;
+
+    &::before,
+    &::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    span {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #f4e736;
+    }
+
+    &.offline-divider span {
+        color: #F44336;
     }
 }

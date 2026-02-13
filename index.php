@@ -58,6 +58,53 @@ function fetchUptime(PDO $db, int $serverId, int $days): array
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+function renderServerCard(array $s)
+{
+    echo '
+    <div class="server-card" data-server-id="' . $s['serverId'] . '">
+        <div class="card-header">
+            <img src="' . $s['serverIcon'] . '" alt="' . $s['serverName'] . '" class="server-icon" data-discord="' . $s['serverDiscord'] . '">
+            <div class="server-info">
+                <h3 class="server-name">' . $s['serverName'] . '</h3>
+                <a href="' . $s['serverDiscord'] . '" class="server-discord" target="_blank" rel="noopener noreferrer">Join Discord</a>
+            </div>
+            <div class="status-container">
+                <div class="status-indicator ' . $s['statusClass'] . '" title="' . $s['statusText'] . '"></div>
+                <span class="status-text ' . $s['statusClass'] . '">' . $s['statusText'] . '</span>
+            </div>
+        </div>
+
+        <div class="card-stats">
+            <div class="stat-row">
+                <span class="stat-label">Players</span>
+                <span class="stat-value">' . ($s['isWIP'] ? '-' : $s['serverPlayers']) . '</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">24h Peak</span>
+                <span class="stat-value">' . ($s['isWIP'] ? '-' : $s['server24hPeak']) . '</span>
+            </div>
+        </div>
+
+        ' .
+        ($s['isWIP'] ? '' :
+        '<div class="uptime-section">
+            <div class="uptime-wrapper">
+                <div class="uptime-labels">
+                    <div class="uptime-label uptime-label-week">Uptime (Past Week)</div>
+                    <div class="uptime-label uptime-label-2week">Uptime (Past 2 Weeks)</div>
+                </div>
+                <div class="uptime-grids">
+                    <div class="uptime-week">' . createUptimeGrid($s['uptime']) . '</div>
+                    <div class="uptime-2week">' . createUptimeGrid($s['uptimeExtended']) . '</div>
+                </div>
+            </div>
+        </div>'
+        )
+        . '
+    </div>
+';
+}
+
 function generateServerGrid()
 {
     global $db;
@@ -65,13 +112,16 @@ function generateServerGrid()
     $db = new PDO("sqlite:$dbPath");
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    $servers = $db->query( // Query all servers
+    $servers = $db->query(
         "SELECT * FROM servers"
     )->fetchAll(PDO::FETCH_ASSOC);
 
+    $onlineServers = [];
+    $offlineServers = [];
+    $wipServers = [];
+
     foreach ($servers as $server) {
         $serverId = $server['id'];
-        $host = $server['host'];
         $serverName = $server['name'];
         $serverIcon = $server['icon_path'];
         $serverDiscord = $server['discord_link'];
@@ -115,43 +165,33 @@ function generateServerGrid()
         $statusClass = $isWIP ? 'wip' : ($isOnline ? 'online' : 'offline');
         $statusText = $isWIP ? 'WIP' : ($isOnline ? 'Online' : 'Offline');
 
-        echo '
-    <div class="server-card" data-server-id="' . $serverId . '">
-        <div class="card-header">
-            <img src="' . $serverIcon . '" alt="' . $serverName . '" class="server-icon" data-discord="' . $serverDiscord . '">
-            <div class="server-info">
-                <h3 class="server-name">' . $serverName . '</h3>
-                <a href="' . $serverDiscord . '" class="server-discord" target="_blank" rel="noopener noreferrer">' . $serverDiscord . '</a>
-            </div>
-            <div class="status-container">
-                <div class="status-indicator ' . $statusClass . '" title="' . $statusText . '"></div>
-                <span class="status-text ' . $statusClass . '">' . $statusText . '</span>
-            </div>
-        </div>
+        $cardData = compact('serverId', 'serverName', 'serverIcon', 'serverDiscord', 'isWIP', 'serverPlayers', 'server24hPeak', 'statusClass', 'statusText', 'uptime', 'uptimeExtended');
 
-        <div class="card-stats">
-            <div class="stat-row">
-                <span class="stat-label">Players</span>
-                <span class="stat-value">' . ($isWIP ? '-' : $serverPlayers) . '</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">24h Peak</span>
-                <span class="stat-value">' . ($isWIP ? '-' : $server24hPeak) . '</span>
-            </div>
-        </div>
+        if ($isWIP) {
+            $wipServers[] = $cardData;
+        } elseif ($isOnline) {
+            $onlineServers[] = $cardData;
+        } else {
+            $offlineServers[] = $cardData;
+        }
+    }
 
-        '.
-        ($isWIP ? '' : 
-        '<div class="uptime-section">
-            <div class="uptime-label">Uptime (Past Week)</div>
-' . createUptimeGrid($uptime) . '<div class="uptime-extended">
-                <div class="uptime-label">Uptime (Past 2 Weeks)</div>
-' . createUptimeGrid($uptimeExtended) . '</div>
-        </div>'
-        )
-        .'
-    </div>
-';
+    foreach ($onlineServers as $s) {
+        renderServerCard($s);
+    }
+
+    if (!empty($offlineServers)) {
+        echo '<div class="wip-divider offline-divider"><span>Offline</span></div>';
+        foreach ($offlineServers as $s) {
+            renderServerCard($s);
+        }
+    }
+
+    if (!empty($wipServers)) {
+        echo '<div class="wip-divider"><span>Work in Progress</span></div>';
+        foreach ($wipServers as $s) {
+            renderServerCard($s);
+        }
     }
 }
 
