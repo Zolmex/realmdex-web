@@ -176,6 +176,11 @@ function generateServerGrid()
         }
     }
 
+    // Sort online servers by player count (descending) by default
+    usort($onlineServers, function($a, $b) {
+        return $b['serverPlayers'] - $a['serverPlayers'];
+    });
+
     foreach ($onlineServers as $s) {
         renderServerCard($s);
     }
@@ -247,6 +252,15 @@ function generateServerGrid()
         </div>
     </header>
     <main class="server-grid-container" role="main">
+        <div class="controls-bar">
+            <label for="sort-select" class="sort-label">Sort by:</label>
+            <select id="sort-select" class="sort-select">
+                <option value="players-desc">Players (High to Low)</option>
+                <option value="players-asc">Players (Low to High)</option>
+                <option value="uptime-desc">Uptime (High to Low)</option>
+                <option value="random">Random</option>
+            </select>
+        </div>
         <div id="server-grid">
             <?php generateServerGrid(); ?>
         </div>
