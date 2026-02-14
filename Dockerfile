@@ -1,11 +1,16 @@
 FROM php:8.2-apache-bookworm
 
-# Install SQLite and necessary extensions
+# Install SQLite, Node.js for SASS compilation, and necessary extensions
 RUN apt-get update && apt-get install -y \
     sqlite3 \
     libsqlite3-dev \
+    nodejs \
+    npm \
     && docker-php-ext-install pdo pdo_sqlite \
     && rm -rf /var/lib/apt/lists/*
+
+# Install SASS globally
+RUN npm install -g sass
 
 # Enable Apache rewrite module
 RUN a2enmod rewrite
@@ -22,6 +27,9 @@ WORKDIR /var/www/html
 
 # Copy project files
 COPY . .
+
+# Compile SCSS to CSS
+RUN sass styles/index.scss styles/index.css
 
 # Create directory for SQLite database and set permissions
 RUN mkdir -p /var/www/html/data && \
