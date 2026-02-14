@@ -1,9 +1,11 @@
-$background-color: #2e2622;
-$background-color-light: #3b2d25;
-$background-color-light2: #4d392d;
-$background-color-light3: #5c4233;
-$background-color-dark: #251f1c;
+$background-image: url('/content/images/rotmg-background3.png');
 
+$background-color: #1e1a24;
+$background-color-light: rgba(46, 40, 54, 0.92);  // Higher opacity for readability
+$background-color-light2: rgba(58, 50, 68, 0.95);
+$background-color-light3: rgba(70, 60, 82, 0.98);
+$background-color-dark: #141018;
+
+$text-color: #ede8ff;
+$text-color-grey: #b8adc9;
 $text-font: 'Inter';
-$text-color: #ffefe5;
-$text-color-grey: #c4b8b0;
