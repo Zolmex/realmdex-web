@@ -66,7 +66,8 @@ function renderServerCard(array $s)
             <img src="' . $s['serverIcon'] . '" alt="' . $s['serverName'] . '" class="server-icon" data-discord="' . $s['serverDiscord'] . '">
             <div class="server-info">
                 <h3 class="server-name">' . $s['serverName'] . '</h3>
-                <a href="' . $s['serverDiscord'] . '" class="server-discord" target="_blank" rel="noopener noreferrer">Join Discord</a>
+                <a href="' . $s['serverDiscord'] . '" class="server-discord" target="_blank" rel="noopener noreferrer">'
+                . (str_contains($s['serverDiscord'], 'discord') ? 'Join Discord' : 'Visit Homepage') . '</a>
             </div>
             <div class="status-container">
                 <div class="status-indicator ' . $s['statusClass'] . '" title="' . $s['statusText'] . '"></div>
