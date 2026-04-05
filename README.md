@@ -38,7 +38,7 @@ Provide the following information when requesting a listing:
 |---|---|---|
 | **Name** | Your server's display name | `Valor` |
 | **Icon** | Square image (PNG or WebP, recommended 100x100+) | `valor.webp` |
-| **Link** | Discord invite or homepage URL | `https://discord.gg/valor` |
+| **Link** | Discord invite or homepage URL | `https://discord.gg/valormc` |
 | **Endpoint** | Full URL to your player count endpoint | `https://yourserver.com/api/players` |
 | **Category** | `pserver` (private server) or `realm-like` (Realm-Like game) | `pserver` |
 
