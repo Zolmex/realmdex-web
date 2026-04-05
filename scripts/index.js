@@ -1,41 +1,14 @@
-// Server sorting functionality
+// Server sorting and category tab functionality
 document.addEventListener('DOMContentLoaded', function() {
     const sortSelect = document.getElementById('sort-select');
-    const serverGrid = document.getElementById('server-grid');
-    
-    // Store original order for random sorting
-    let originalOnlineServers = [];
-    
-    // Initialize - capture initial online server order
-    function initializeServers() {
-        const allCards = Array.from(serverGrid.children);
-        const dividers = allCards.filter(el => el.classList.contains('wip-divider'));
-        const offlineDividerIndex = dividers.findIndex(el => el.classList.contains('offline-divider'));
-        
-        // Get online servers (before any divider)
-        if (offlineDividerIndex !== -1) {
-            const offlineDivider = dividers.find(el => el.classList.contains('offline-divider'));
-            const offlineDividerPos = allCards.indexOf(offlineDivider);
-            originalOnlineServers = allCards.slice(0, offlineDividerPos);
-        } else if (dividers.length > 0) {
-            // Only WIP divider exists
-            const firstDividerPos = allCards.indexOf(dividers[0]);
-            originalOnlineServers = allCards.slice(0, firstDividerPos);
-        } else {
-            // No dividers, all are online
-            originalOnlineServers = allCards.filter(el => 
-                el.classList.contains('server-card') && 
-                el.querySelector('.status-indicator.online')
-            );
-        }
-    }
-    
+    const categoryTabs = document.querySelectorAll('.category-tab');
+    const serverGrids = document.querySelectorAll('.server-grid');
+
     // Extract server data from card
     function getServerData(card) {
         const playersText = card.querySelector('.stat-value')?.textContent || '0';
         const players = parseInt(playersText) || 0;
-        
-        // Calculate average uptime from all uptime days
+
         const uptimeDays = card.querySelectorAll('.uptime-day');
         let totalUptime = 0;
         uptimeDays.forEach(day => {
@@ -43,61 +16,53 @@ document.addEventListener('DOMContentLoaded', function() {
             totalUptime += uptime;
         });
         const avgUptime = uptimeDays.length > 0 ? totalUptime / uptimeDays.length : 0;
-        
+
         return {
             element: card,
             players: players,
             uptime: avgUptime
         };
     }
-    
-    // Sort servers based on selected option
-    function sortServers(sortType) {
-        const allCards = Array.from(serverGrid.children);
-        
-        // Find dividers
-        const offlineDivider = allCards.find(el => 
+
+    // Sort a specific grid's online servers
+    function sortGrid(grid, sortType) {
+        const allCards = Array.from(grid.children);
+
+        const offlineDivider = allCards.find(el =>
             el.classList.contains('wip-divider') && el.classList.contains('offline-divider')
         );
-        const wipDivider = allCards.find(el => 
+        const wipDivider = allCards.find(el =>
             el.classList.contains('wip-divider') && !el.classList.contains('offline-divider')
         );
-        
-        // Get current online servers
+
         let onlineCards = [];
         if (offlineDivider) {
-            const offlineDividerPos = allCards.indexOf(offlineDivider);
-            onlineCards = allCards.slice(0, offlineDividerPos);
+            onlineCards = allCards.slice(0, allCards.indexOf(offlineDivider));
         } else if (wipDivider) {
-            const wipDividerPos = allCards.indexOf(wipDivider);
-            onlineCards = allCards.slice(0, wipDividerPos);
+            onlineCards = allCards.slice(0, allCards.indexOf(wipDivider));
         } else {
-            onlineCards = allCards.filter(el => 
-                el.classList.contains('server-card') && 
+            onlineCards = allCards.filter(el =>
+                el.classList.contains('server-card') &&
                 el.querySelector('.status-indicator.online')
             );
         }
-        
-        // Get offline and WIP servers
+
         let offlineCards = [];
         let wipCards = [];
-        
+
         if (offlineDivider && wipDivider) {
-            const offlineDividerPos = allCards.indexOf(offlineDivider);
-            const wipDividerPos = allCards.indexOf(wipDivider);
-            offlineCards = allCards.slice(offlineDividerPos + 1, wipDividerPos);
-            wipCards = allCards.slice(wipDividerPos + 1);
+            const offlinePos = allCards.indexOf(offlineDivider);
+            const wipPos = allCards.indexOf(wipDivider);
+            offlineCards = allCards.slice(offlinePos + 1, wipPos);
+            wipCards = allCards.slice(wipPos + 1);
         } else if (offlineDivider) {
-            const offlineDividerPos = allCards.indexOf(offlineDivider);
-            offlineCards = allCards.slice(offlineDividerPos + 1);
+            offlineCards = allCards.slice(allCards.indexOf(offlineDivider) + 1);
         } else if (wipDivider) {
-            const wipDividerPos = allCards.indexOf(wipDivider);
-            wipCards = allCards.slice(wipDividerPos + 1);
+            wipCards = allCards.slice(allCards.indexOf(wipDivider) + 1);
         }
-        
-        // Sort only online servers
+
         let sortedOnline = onlineCards.map(card => getServerData(card));
-        
+
         switch(sortType) {
             case 'players-desc':
                 sortedOnline.sort((a, b) => b.players - a.players);
@@ -109,46 +74,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 sortedOnline.sort((a, b) => b.uptime - a.uptime);
                 break;
             case 'random':
-                // Fisher-Yates shuffle
                 for (let i = sortedOnline.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [sortedOnline[i], sortedOnline[j]] = [sortedOnline[j], sortedOnline[i]];
                 }
                 break;
         }
-        
-        // Clear grid
-        serverGrid.innerHTML = '';
-        
-        // Re-add sorted online servers
-        sortedOnline.forEach(data => {
-            serverGrid.appendChild(data.element);
-        });
-        
-        // Re-add offline section if exists
+
+        grid.innerHTML = '';
+
+        sortedOnline.forEach(data => grid.appendChild(data.element));
+
         if (offlineCards.length > 0) {
-            serverGrid.appendChild(offlineDivider);
-            offlineCards.forEach(card => {
-                serverGrid.appendChild(card);
-            });
+            grid.appendChild(offlineDivider);
+            offlineCards.forEach(card => grid.appendChild(card));
         }
-        
-        // Re-add WIP section if exists
+
         if (wipCards.length > 0) {
-            serverGrid.appendChild(wipDivider);
-            wipCards.forEach(card => {
-                serverGrid.appendChild(card);
-            });
+            grid.appendChild(wipDivider);
+            wipCards.forEach(card => grid.appendChild(card));
         }
     }
-    
-    // Initialize on page load
-    initializeServers();
-    
-    // Add event listener for sort changes
+
+    // Category tab switching
+    categoryTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const category = this.dataset.category;
+
+            categoryTabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+
+            serverGrids.forEach(grid => {
+                grid.style.display = grid.dataset.category === category ? '' : 'none';
+            });
+        });
+    });
+
+    // Sort change applies to the currently visible grid
     if (sortSelect) {
         sortSelect.addEventListener('change', function() {
-            sortServers(this.value);
+            const activeGrid = document.querySelector('.server-grid[style=""], .server-grid:not([style*="display: none"])');
+            if (activeGrid) {
+                sortGrid(activeGrid, this.value);
+            }
         });
     }
 });

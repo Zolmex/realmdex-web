@@ -26,3 +26,6 @@ ON server_polls(server_id, time);
 
 ALTER TABLE servers
 ADD COLUMN is_wip INTEGER DEFAULT 0;
+
+ALTER TABLE servers
+ADD COLUMN category TEXT NOT NULL DEFAULT 'pserver';

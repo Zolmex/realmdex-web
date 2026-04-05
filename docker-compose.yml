@@ -1,0 +1,15 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - db-data:/var/www/html/data
+    environment:
+      - DB_PATH=/var/www/html/data/uptime.db
+      - POLL_INTERVAL=60
+      - SEED_DB=1
+    restart: unless-stopped
+
+volumes:
+  db-data:
