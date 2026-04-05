@@ -106,16 +106,18 @@ function renderServerCard(array $s)
 ';
 }
 
-function generateServerGrid()
+function generateServerGrid(string $category)
 {
     global $db;
-    $dbPath = getenv('DB_PATH') ?: '/var/www/html/data/uptime.db';
-    $db = new PDO("sqlite:$dbPath");
-    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    if (!isset($db)) {
+        $dbPath = getenv('DB_PATH') ?: '/var/www/html/data/uptime.db';
+        $db = new PDO("sqlite:$dbPath");
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    }
 
-    $servers = $db->query(
-        "SELECT * FROM servers"
-    )->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $db->prepare("SELECT * FROM servers WHERE category = :category");
+    $stmt->execute([':category' => $category]);
+    $servers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $onlineServers = [];
     $offlineServers = [];
@@ -253,6 +255,10 @@ function generateServerGrid()
         </div>
     </header>
     <main class="server-grid-container" role="main">
+        <div class="category-tabs">
+            <button class="category-tab active" data-category="pserver">Private Servers</button>
+            <button class="category-tab" data-category="realm-like">Realm-Likes</button>
+        </div>
         <div class="controls-bar">
             <label for="sort-select" class="sort-label">Sort by:</label>
             <select id="sort-select" class="sort-select">
@@ -262,8 +268,11 @@ function generateServerGrid()
                 <option value="random">Random</option>
             </select>
         </div>
-        <div id="server-grid">
-            <?php generateServerGrid(); ?>
+        <div id="server-grid" class="server-grid" data-category="pserver">
+            <?php generateServerGrid('pserver'); ?>
+        </div>
+        <div id="server-grid-realmlike" class="server-grid" data-category="realm-like" style="display: none;">
+            <?php generateServerGrid('realm-like'); ?>
         </div>
     </main>
     <script type="module" src="/scripts/index.js"></script>

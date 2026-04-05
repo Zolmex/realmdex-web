@@ -8,6 +8,12 @@ chmod 777 /var/www/html/data
 if [ ! -f /var/www/html/data/uptime.db ]; then
     echo "Initializing database..."
     sqlite3 /var/www/html/data/uptime.db < /var/www/html/system/schema.sql
+
+    # Seed with mock data if SEED_DB is set
+    if [ "$SEED_DB" = "1" ] && [ -f /var/www/html/system/seed.sql ]; then
+        echo "Seeding database with mock data..."
+        sqlite3 /var/www/html/data/uptime.db < /var/www/html/system/seed.sql
+    fi
 fi
 
 # Ensure the database file itself is writable
