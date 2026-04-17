@@ -1,12 +1,13 @@
 FROM php:8.2-apache-bookworm
 
-# Install SQLite, Node.js for SASS compilation, and necessary extensions
+# Install SQLite, curl, Node.js for SASS compilation, and necessary extensions
 RUN apt-get update && apt-get install -y \
     sqlite3 \
     libsqlite3-dev \
+    libcurl4-openssl-dev \
     nodejs \
     npm \
-    && docker-php-ext-install pdo pdo_sqlite \
+    && docker-php-ext-install pdo pdo_sqlite curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install SASS globally
@@ -31,8 +32,9 @@ COPY . .
 # Compile SCSS to CSS
 RUN sass styles/index.scss styles/index.css
 
-# Create directory for SQLite database and set permissions
-RUN mkdir -p /var/www/html/data && \
+# Fix Windows line endings and set permissions
+RUN sed -i 's/\r$//' /var/www/html/entrypoint.sh && \
+    mkdir -p /var/www/html/data && \
     chown -R www-data:www-data /var/www/html && \
     chmod +x /var/www/html/entrypoint.sh
 

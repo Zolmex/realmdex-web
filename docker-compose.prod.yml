@@ -1,0 +1,35 @@
+services:
+  server-count:
+    image: valorhub/server-count:latest
+    container_name: server-count-prod
+    restart: unless-stopped
+
+    volumes:
+      - ./data:/var/www/html/data
+
+    environment:
+      - DB_PATH=/var/www/html/data/uptime.db
+      - POLL_INTERVAL=60
+
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+
+    # Traefik labels for HTTPS
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.server-count.rule=Host(`realmdex.com`)"
+      - "traefik.http.services.server-count.loadbalancer.server.port=80"
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
