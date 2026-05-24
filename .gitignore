@@ -10,6 +10,7 @@
 .env
 .env.local
 .env.auth
+!example.env
 
 # Docker
 .docker/
@@ -23,3 +24,11 @@
 # OS files
 .DS_Store
 Thumbs.db
+
+# Rust / Cloudflare Workers build artifacts
+/target
+/.wrangler
+/dist
+/node_modules
+/build
+*.wasm
