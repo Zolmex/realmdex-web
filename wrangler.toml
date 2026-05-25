@@ -1,0 +1,42 @@
+# Deviation from plan: bumped leptos 0.6 -> 0.8 and worker 0.3 -> 0.8 (latest as of 2026-05).
+# Leptos 0.8 SSR API: render via `Owner::new().with(|| App().to_html())`
+# (no more `leptos::ssr::render_to_string`). `RenderHtml` trait comes from `leptos::tachys::view`.
+# worker-build runs from `crates/worker/`, so `main` lives under that directory.
+# Renamed local crate to `realmdex-worker` to avoid collision with crates.io `worker`.
+# Prepend ~/.cargo/bin to PATH so rustup's toolchain wins over a homebrew rust that may
+# shadow it; the wasm32-unknown-unknown target needs the rustup-managed sysroot.
+
+name = "realmdex"
+main = "crates/worker/build/worker/shim.mjs"
+compatibility_date = "2025-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+[build]
+command = "bash scripts/build-worker.sh"
+
+[triggers]
+crons = [
+  "*/1 * * * *",   # poller every minute
+  "30 3 * * *",    # rollup daily at 03:30 UTC (placeholder, implemented in Task 15)
+]
+
+[assets]
+directory = "public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "realmdex"
+# Placeholder: replace with the real id from `wrangler d1 create realmdex` before first real deploy.
+database_id = "e6b36d1e-8f4d-44de-be59-95a301c53fb9"
+migrations_dir = "migrations"
+
+[env.production]
+name = "realmdex"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "realmdex-prod"
+# Placeholder: replace with the real id from `wrangler d1 create realmdex-prod` before first real deploy.
+database_id = "0bd7514d-166e-4890-a208-5f500589fd08"
+migrations_dir = "migrations"
