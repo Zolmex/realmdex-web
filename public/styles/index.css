@@ -47,7 +47,7 @@ input {
   box-shadow: 0px -5px 15px #090A0C;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   background-color: rgba(46, 40, 54, 0.92);
 }
 .site-header #h-realmdex-icon {
@@ -62,6 +62,25 @@ input {
 }
 .site-header p {
   margin: 0;
+}
+.site-header .header-nav {
+  margin-right: 14px;
+}
+.site-header .discord-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background-color: #5865F2;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+.site-header .discord-btn:hover {
+  background-color: #4752c4;
 }
 
 .server-grid-container {
