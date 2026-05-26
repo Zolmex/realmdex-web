@@ -11,7 +11,13 @@
 .env
 .env.local
 .env.auth
+.dev.vars
 !example.env
+
+# Production data dumps
+*.sql
+!migrations/*.sql
+the-real-prod.*
 
 # Docker
 .docker/
