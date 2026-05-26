@@ -1,6 +1,3 @@
-// Cron-triggered poller. Reads `polled = 1` servers from D1, fetches each in
-// parallel with a 10s timeout, batch-inserts one row per server into
-// `server_polls`. Any failure (network, non-200, parse) records online=0.
 use futures::future::join_all;
 use worker::wasm_bindgen::JsValue;
 use worker::*;

@@ -29,7 +29,6 @@ mod tests {
 
     #[test]
     fn seventy_five_is_pure_yellow_green_transition() {
-        // At 75 the >= 75 branch wins; greenIntensity = 0 -> rgb(255, 255, 0).
         assert_eq!(uptime_color(75.0), "rgb(255, 255, 0)");
     }
 

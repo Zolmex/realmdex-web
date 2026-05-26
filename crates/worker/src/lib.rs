@@ -4,6 +4,7 @@ use leptos::prelude::{provide_context, Owner};
 use leptos::tachys::view::RenderHtml;
 use worker::*;
 
+mod admin;
 mod poller;
 mod rollup;
 mod security;
@@ -24,6 +25,26 @@ async fn scheduled(event: ScheduledEvent, env: Env, _ctx: ScheduleContext) {
     }
 }
 
+async fn json_api<B, T, F, Fut>(req: &mut Request, env: Env, f: F) -> Result<Response>
+where
+    B: serde::de::DeserializeOwned,
+    T: serde::Serialize,
+    F: FnOnce(B) -> Fut,
+    Fut: std::future::Future<Output = worker::Result<T>>,
+{
+    let body: B = match req.json().await {
+        Ok(b) => b,
+        Err(e) => return Ok(security::add_cors(Response::error(format!("bad json: {e}"), 400)?)),
+    };
+    let owner = Owner::new();
+    owner.set();
+    provide_context(env);
+    match f(body).await {
+        Ok(v) => Ok(security::add_cors(Response::from_json(&v)?)),
+        Err(e) => Ok(security::add_cors(Response::error(format!("server fn error: {e}"), 500)?)),
+    }
+}
+
 #[event(fetch)]
 async fn fetch(mut req: Request, env: Env, _ctx: Context) -> Result<Response> {
     console_error_panic_hook::set_once();
@@ -32,46 +53,26 @@ async fn fetch(mut req: Request, env: Env, _ctx: Context) -> Result<Response> {
     }
     let path = req.path();
 
+    if path.starts_with("/admin") || path.starts_with("/api/admin/") {
+        let email = match security::guard_admin(&req, &env).await {
+            Ok(e) => e,
+            Err(deny) => return Ok(deny),
+        };
+        return admin::handle(&mut req, &env, &path, &email).await;
+    }
+
     if path == "/api/list_servers" && req.method() == Method::Post {
         #[derive(serde::Deserialize)]
-        struct Body {
-            category: Category,
-        }
-        let body: Body = match req.json().await {
-            Ok(b) => b,
-            Err(e) => return Ok(security::add_cors(Response::error(format!("bad json: {e}"), 400)?)),
-        };
-        let owner = Owner::new();
-        owner.set();
-        provide_context(env);
-        let result = list_servers(body.category).await;
-        return match result {
-            Ok(v) => Ok(security::add_cors(Response::from_json(&v)?)),
-            Err(e) => Ok(security::add_cors(Response::error(format!("server fn error: {e}"), 500)?)),
-        };
+        struct Body { category: Category }
+        return json_api(&mut req, env, |b: Body| list_servers(b.category)).await;
     }
 
     if path == "/api/server_sparkline" && req.method() == Method::Post {
         #[derive(serde::Deserialize)]
-        struct Body {
-            server_id: i64,
-        }
-        let body: Body = match req.json().await {
-            Ok(b) => b,
-            Err(e) => return Ok(security::add_cors(Response::error(format!("bad json: {e}"), 400)?)),
-        };
-        let owner = Owner::new();
-        owner.set();
-        provide_context(env);
-        let result = server_sparkline(body.server_id).await;
-        return match result {
-            Ok(v) => Ok(security::add_cors(Response::from_json(&v)?)),
-            Err(e) => Ok(security::add_cors(Response::error(format!("server fn error: {e}"), 500)?)),
-        };
+        struct Body { server_id: i64 }
+        return json_api(&mut req, env, |b: Body| server_sparkline(b.server_id)).await;
     }
 
-    // SSR fallback. Fetch both categories from D1 first, inject into Leptos
-    // context, and embed an initial-data JSON blob + a small controller script.
     let db = env.d1("DB")?;
     let pserver = app::db::list_servers_in_category(&db, Category::Pserver)
         .await
@@ -80,15 +81,14 @@ async fn fetch(mut req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .await
         .unwrap_or_default();
     let initial = InitialServers { pserver, realm_like };
-    let initial_json = serde_json::to_string(&initial).unwrap_or_default();
+    // serde_json doesn't escape '/', so a DB string containing "</script>" would
+    // break out of the <script> tag. "<\/" is valid JSON and blocks the HTML parser.
+    let initial_json = serde_json::to_string(&initial)
+        .unwrap_or_default()
+        .replace("</", "<\\/");
 
-    let initial_for_ctx = initial.clone();
     let owner = Owner::new();
-    let html = owner.with(|| {
-        provide_context(env);
-        provide_context(initial_for_ctx);
-        app::App().to_html()
-    });
+    let html = owner.with(|| app::App().to_html());
 
     let body = format!(
         "<!DOCTYPE html><html lang=\"en\"><head>\
@@ -107,10 +107,112 @@ async fn fetch(mut req: Request, env: Env, _ctx: Context) -> Result<Response> {
     Ok(security::add_cors(Response::from_html(body)?))
 }
 
-// Vanilla-JS controller: handles tab switching, sort, and 30s live updates.
-// Fetches /api/list_servers, rebuilds card markup minimally for the active
-// category, and re-applies sort. This is intentionally small — full hydration
-// will come once we have a workers-compatible Leptos server-fn flavor.
+const ADMIN_CONTROLLER: &str = r#"
+(function(){
+  var dataEl = document.getElementById('admin-data');
+  if (!dataEl) return;
+  var data;
+  try { data = JSON.parse(dataEl.textContent || '{}'); } catch(e) { return; }
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+
+  function flash(msg, ok) {
+    var el = document.getElementById('admin-flash');
+    if (!el) return;
+    el.className = 'admin-flash ' + (ok ? 'flash-ok' : 'flash-err');
+    el.textContent = msg;
+    setTimeout(function(){ el.textContent = ''; el.className = ''; }, 4000);
+  }
+
+  function formData(form) {
+    return {
+      name: form.name.value.trim(),
+      host: form.host.value.trim(),
+      category: form.category.value,
+      icon_path: form.icon_path.value.trim() || null,
+      discord_link: form.discord_link.value.trim() || null,
+      is_wip: form.is_wip.checked,
+      polled: form.polled.checked
+    };
+  }
+
+  function api(method, url, body) {
+    return fetch(url, {
+      method: method,
+      headers: {'Content-Type':'application/json'},
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function(r){
+      if (r.ok) return r.json();
+      return r.text().then(function(t){ throw new Error(t); });
+    });
+  }
+
+  // list page
+  var rows = document.getElementById('server-rows');
+  if (rows && Array.isArray(data)) {
+    function renderRows() {
+      var html = '';
+      for (var i = 0; i < data.length; i++) {
+        var s = data[i];
+        html += '<tr>'
+          + '<td>' + s.id + '</td>'
+          + '<td>' + esc(s.name) + '</td>'
+          + '<td>' + esc(s.category) + '</td>'
+          + '<td class="admin-host">' + esc(s.host) + '</td>'
+          + '<td>' + (s.polled ? 'Yes' : 'No') + '</td>'
+          + '<td>' + (s.is_wip ? 'Yes' : 'No') + '</td>'
+          + '<td>'
+            + '<a href="/admin/edit/' + s.id + '">Edit</a> '
+            + '<button class="btn-delete" data-id="' + s.id + '" data-name="' + esc(s.name) + '">Delete</button>'
+          + '</td></tr>';
+      }
+      rows.innerHTML = html;
+    }
+    renderRows();
+
+    rows.addEventListener('click', function(e) {
+      var btn = e.target;
+      if (!btn.classList.contains('btn-delete')) return;
+      var id = btn.getAttribute('data-id');
+      var name = btn.getAttribute('data-name');
+      if (!confirm('Delete "' + name + '"? This removes all poll history.')) return;
+      api('DELETE', '/api/admin/servers/' + id)
+        .then(function(){ data = data.filter(function(s){ return String(s.id) !== id; }); renderRows(); flash('Deleted', true); })
+        .catch(function(e){ flash('Delete failed: ' + e.message, false); });
+    });
+
+    var addForm = document.getElementById('add-form');
+    if (addForm) addForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      api('POST', '/api/admin/servers', formData(addForm))
+        .then(function(s){ data.push(s); renderRows(); addForm.reset(); flash('Created "' + s.name + '"', true); })
+        .catch(function(e){ flash('Create failed: ' + e.message, false); });
+    });
+  }
+
+  // edit page
+  var editForm = document.getElementById('edit-form');
+  if (editForm && data && data.id) {
+    editForm.name.value = data.name || '';
+    editForm.host.value = data.host || '';
+    editForm.category.value = data.category || 'pserver';
+    editForm.icon_path.value = data.icon_path || '';
+    editForm.discord_link.value = data.discord_link || '';
+    editForm.is_wip.checked = !!data.is_wip;
+    editForm.polled.checked = !!data.polled;
+    document.getElementById('edit-id').value = data.id;
+
+    editForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var id = document.getElementById('edit-id').value;
+      api('PUT', '/api/admin/servers/' + id, formData(editForm))
+        .then(function(){ flash('Saved', true); setTimeout(function(){ location.href = '/admin'; }, 800); })
+        .catch(function(e){ flash('Save failed: ' + e.message, false); });
+    });
+  }
+})();
+"#;
+
 const CLIENT_CONTROLLER: &str = r#"
 (function(){
   var initialEl = document.getElementById('initial-data');
@@ -125,11 +227,19 @@ const CLIENT_CONTROLLER: &str = r#"
   var activeSort = 'players-desc';
 
   function uptimeColor(p) {
-    if (p >= 99) return '#3fb950';
-    if (p >= 95) return '#7cc06b';
-    if (p >= 80) return '#d1b03d';
-    if (p >= 50) return '#d97935';
-    return '#b8423a';
+    if (p >= 75) {
+      var g = Math.floor(((p - 75) / 25) * 255);
+      return 'rgb(' + (255 - g) + ', 255, 0)';
+    }
+    if (p >= 50) {
+      var b = Math.floor(((p - 50) / 25) * 255);
+      return 'rgb(255, 255, ' + b + ')';
+    }
+    if (p > 0) {
+      var g = Math.floor((p / 50) * 255);
+      return 'rgb(255, ' + g + ', 0)';
+    }
+    return 'rgb(255, 0, 0)';
   }
   function avgUptime(s) {
     if (!s.uptime_14d || !s.uptime_14d.length) return 0;
@@ -143,7 +253,6 @@ const CLIENT_CONTROLLER: &str = r#"
     return h;
   }
   function shuffle(arr) {
-    // deterministic-enough via xorshift seeded by name hashes
     var seed = arr.reduce(function(a,s){ return (a ^ hashSeed(s.name)) >>> 0; }, 1);
     function rnd(){ seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed>>>0) / 4294967296; }
     var a = arr.slice();
@@ -187,7 +296,7 @@ const CLIENT_CONTROLLER: &str = r#"
   }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
   function renderCard(s) {
-    var status = s.status; // 'online' | 'offline' | 'wip'
+    var status = s.status;
     var isWip = status === 'wip';
     var statusText = isWip ? 'WIP' : (status === 'online' ? 'Online' : 'Offline');
     var linkText = (s.link||'').indexOf('discord') >= 0 ? 'Join Discord' : 'Visit Homepage';
@@ -275,5 +384,6 @@ const CLIENT_CONTROLLER: &str = r#"
   var sel = document.getElementById('sort-select');
   if (sel) sel.addEventListener('change', function(){ activeSort = sel.value; renderGrid(); });
   setInterval(refetch, 30000);
+  renderGrid();
 })();
 "#;

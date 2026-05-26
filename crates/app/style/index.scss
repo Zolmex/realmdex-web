@@ -357,3 +357,74 @@
         color: #F44336;
     }
 }
+
+// admin dashboard
+.admin-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  font-family: Inter, system-ui, sans-serif;
+  color: #e0e0e0;
+}
+.admin-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  h1 { font-size: 1.4rem; margin: 0; }
+  .admin-user { color: #888; font-size: 0.85rem; margin-left: auto; }
+  .admin-back { color: #7cc06b; font-size: 0.85rem; }
+}
+.admin-flash {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  &.flash-ok { background: #1a3a1a; color: #7cc06b; }
+  &.flash-err { background: #3a1a1a; color: #d97935; }
+  &:empty { display: none; }
+}
+.admin-add-form {
+  margin-bottom: 1.5rem;
+  summary { cursor: pointer; color: #7cc06b; font-weight: 600; }
+}
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 500px;
+  margin-top: 0.75rem;
+  label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem; color: #aaa; }
+  input[type="text"], input:not([type]), select {
+    padding: 0.4rem 0.6rem;
+    background: #1e1e2e;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-size: 0.9rem;
+  }
+  button[type="submit"] {
+    align-self: flex-start;
+    padding: 0.5rem 1.5rem;
+    background: #7cc06b;
+    color: #111;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    &:hover { background: #6ab05b; }
+  }
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #222; }
+  th { color: #888; font-weight: 600; }
+  .admin-host { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .btn-delete {
+    background: none; border: 1px solid #b8423a; color: #b8423a; border-radius: 3px;
+    padding: 0.2rem 0.5rem; cursor: pointer; font-size: 0.8rem;
+    &:hover { background: #3a1a1a; }
+  }
+  a { color: #7cc06b; }
+}

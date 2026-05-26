@@ -1,5 +1,3 @@
-// worker-rs 0.8 API: D1PreparedStatement::bind takes &[JsValue]; all() returns
-// D1Result (not Result<D1Result>) which then yields .results::<T>()?.
 use crate::types::{Category, DailyUptime, ServerCardData, SparkPoint, Status};
 use worker::wasm_bindgen::JsValue;
 use worker::D1Database;
@@ -38,6 +36,33 @@ struct SparkRow {
     server_id: i64,
     t_unix: i64,
     players: i64,
+}
+
+#[derive(serde::Deserialize)]
+struct AdminRow {
+    id: i64,
+    name: String,
+    icon_path: Option<String>,
+    discord_link: Option<String>,
+    host: String,
+    category: String,
+    is_wip: i64,
+    polled: i64,
+    created_at: String,
+}
+
+fn admin_row_to_type(r: AdminRow) -> crate::types::AdminServerRow {
+    crate::types::AdminServerRow {
+        id: r.id,
+        name: r.name,
+        icon_path: r.icon_path.unwrap_or_default(),
+        discord_link: r.discord_link.unwrap_or_default(),
+        host: r.host,
+        category: if r.category == "realm-like" { Category::RealmLike } else { Category::Pserver },
+        is_wip: r.is_wip == 1,
+        polled: r.polled == 1,
+        created_at: r.created_at,
+    }
 }
 
 pub async fn list_servers_in_category(
@@ -184,4 +209,79 @@ pub async fn sparkline_for_server(
             players: r.players as i32,
         })
         .collect())
+}
+
+pub async fn list_servers_admin(db: &D1Database) -> worker::Result<Vec<crate::types::AdminServerRow>> {
+    let rows: Vec<AdminRow> = db
+        .prepare("SELECT id, name, icon_path, discord_link, host, category, is_wip, polled, created_at FROM servers ORDER BY id")
+        .all()
+        .await?
+        .results()?;
+    Ok(rows.into_iter().map(admin_row_to_type).collect())
+}
+
+pub async fn get_server_admin(db: &D1Database, id: i64) -> worker::Result<Option<crate::types::AdminServerRow>> {
+    let rows: Vec<AdminRow> = db
+        .prepare("SELECT id, name, icon_path, discord_link, host, category, is_wip, polled, created_at FROM servers WHERE id = ?1")
+        .bind(&[JsValue::from_f64(id as f64)])?
+        .all()
+        .await?
+        .results()?;
+    Ok(rows.into_iter().next().map(admin_row_to_type))
+}
+
+pub async fn create_server(db: &D1Database, input: &crate::types::ServerInput) -> worker::Result<crate::types::AdminServerRow> {
+    db.prepare(
+        "INSERT INTO servers (name, icon_path, discord_link, host, category, is_wip, polled)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"
+    )
+    .bind(&[
+        JsValue::from_str(&input.name),
+        JsValue::from_str(input.icon_path.as_deref().unwrap_or("")),
+        JsValue::from_str(input.discord_link.as_deref().unwrap_or("")),
+        JsValue::from_str(&input.host),
+        JsValue::from_str(input.category.as_db_str()),
+        JsValue::from_f64(if input.is_wip { 1.0 } else { 0.0 }),
+        JsValue::from_f64(if input.polled { 1.0 } else { 0.0 }),
+    ])?
+    .run()
+    .await?;
+
+    let rows: Vec<AdminRow> = db
+        .prepare("SELECT id, name, icon_path, discord_link, host, category, is_wip, polled, created_at FROM servers WHERE id = last_insert_rowid()")
+        .all()
+        .await?
+        .results()?;
+    rows.into_iter().next().map(admin_row_to_type)
+        .ok_or_else(|| worker::Error::RustError("insert succeeded but row not found".into()))
+}
+
+pub async fn update_server(db: &D1Database, id: i64, input: &crate::types::ServerInput) -> worker::Result<Option<crate::types::AdminServerRow>> {
+    db.prepare(
+        "UPDATE servers SET name = ?1, icon_path = ?2, discord_link = ?3, host = ?4, category = ?5, is_wip = ?6, polled = ?7
+         WHERE id = ?8"
+    )
+    .bind(&[
+        JsValue::from_str(&input.name),
+        JsValue::from_str(input.icon_path.as_deref().unwrap_or("")),
+        JsValue::from_str(input.discord_link.as_deref().unwrap_or("")),
+        JsValue::from_str(&input.host),
+        JsValue::from_str(input.category.as_db_str()),
+        JsValue::from_f64(if input.is_wip { 1.0 } else { 0.0 }),
+        JsValue::from_f64(if input.polled { 1.0 } else { 0.0 }),
+        JsValue::from_f64(id as f64),
+    ])?
+    .run()
+    .await?;
+
+    get_server_admin(db, id).await
+}
+
+pub async fn delete_server(db: &D1Database, id: i64) -> worker::Result<bool> {
+    db.prepare("DELETE FROM servers WHERE id = ?1")
+        .bind(&[JsValue::from_f64(id as f64)])?
+        .run()
+        .await?;
+
+    Ok(true)
 }

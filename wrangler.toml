@@ -11,6 +11,9 @@ main = "crates/worker/build/worker/shim.mjs"
 compatibility_date = "2025-01-15"
 compatibility_flags = ["nodejs_compat"]
 
+[vars]
+CF_ACCESS_TEAM_DOMAIN = "valor"
+
 [build]
 command = "bash scripts/build-worker.sh"
 
@@ -28,7 +31,7 @@ binding = "ASSETS"
 binding = "DB"
 database_name = "realmdex"
 # Placeholder: replace with the real id from `wrangler d1 create realmdex` before first real deploy.
-database_id = "e6b36d1e-8f4d-44de-be59-95a301c53fb9"
+database_id = "9b8a7bbe-dfbe-4bc7-bb49-5612b080e456"
 migrations_dir = "migrations"
 
 [env.production]
@@ -38,5 +41,5 @@ name = "realmdex"
 binding = "DB"
 database_name = "realmdex-prod"
 # Placeholder: replace with the real id from `wrangler d1 create realmdex-prod` before first real deploy.
-database_id = "0bd7514d-166e-4890-a208-5f500589fd08"
+database_id = "f1f24031-884c-4e5e-b513-9592022b91ce"
 migrations_dir = "migrations"

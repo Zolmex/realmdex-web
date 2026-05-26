@@ -1,17 +1,4 @@
-use leptos::prelude::*;
 use crate::types::SparkPoint;
-
-#[component]
-pub fn Sparkline(points: Signal<Vec<SparkPoint>>) -> impl IntoView {
-    let width: f32 = 120.0;
-    let height: f32 = 24.0;
-    let path = move || build_path(&points.get(), width, height);
-    view! {
-        <svg class="sparkline" width=width height=height viewBox=format!("0 0 {width} {height}")>
-            <path d=path fill="none" stroke="currentColor" stroke-width="1.5"/>
-        </svg>
-    }
-}
 
 pub fn build_path(points: &[SparkPoint], width: f32, height: f32) -> String {
     if points.is_empty() {

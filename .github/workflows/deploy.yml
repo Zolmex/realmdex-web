@@ -44,13 +44,13 @@ jobs:
       # Apply migrations against the production D1 BEFORE deploying the worker,
       # so the new schema is in place when the new code starts handling requests.
       - name: Apply production D1 migrations
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd  # v3
         with:
           accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           command: d1 migrations apply realmdex-prod --env production --remote
 
       - name: Deploy worker
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd  # v3
         with:
           accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --env production

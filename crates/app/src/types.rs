@@ -54,3 +54,33 @@ pub struct InitialServers {
     pub pserver: Vec<ServerCardData>,
     pub realm_like: Vec<ServerCardData>,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AdminServerRow {
+    pub id: i64,
+    pub name: String,
+    pub icon_path: String,
+    pub discord_link: String,
+    pub host: String,
+    pub category: Category,
+    pub is_wip: bool,
+    pub polled: bool,
+    pub created_at: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ServerInput {
+    pub name: String,
+    pub host: String,
+    pub category: Category,
+    #[serde(default)]
+    pub icon_path: Option<String>,
+    #[serde(default)]
+    pub discord_link: Option<String>,
+    #[serde(default)]
+    pub is_wip: bool,
+    #[serde(default = "default_true")]
+    pub polled: bool,
+}
+
+fn default_true() -> bool { true }

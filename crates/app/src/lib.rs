@@ -3,6 +3,7 @@ use leptos::prelude::*;
 pub mod components;
 pub mod types;
 pub mod uptime;
+pub mod validation;
 
 #[cfg(feature = "ssr")]
 pub mod db;
