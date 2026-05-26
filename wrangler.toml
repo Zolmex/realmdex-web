@@ -11,9 +11,6 @@ main = "crates/worker/build/worker/shim.mjs"
 compatibility_date = "2025-01-15"
 compatibility_flags = ["nodejs_compat"]
 
-[vars]
-CF_ACCESS_TEAM_DOMAIN = "valor"
-
 [build]
 command = "bash scripts/build-worker.sh"
 
