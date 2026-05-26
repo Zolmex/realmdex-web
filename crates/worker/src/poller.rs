@@ -45,21 +45,37 @@ async fn poll_one(id: i64, host: String) -> (i64, i64, i64) {
     if host.is_empty() {
         return (id, 0, 0);
     }
-    let req = match Request::new(&host, Method::Get) {
+    let mut req = match Request::new(&host, Method::Get) {
         Ok(r) => r,
-        Err(_) => return (id, 0, 0),
+        Err(e) => {
+            console_log!("[poll id={id}] bad request for {host}: {e:?}");
+            return (id, 0, 0);
+        }
     };
+    let _ = req.headers_mut().map(|h| h.set("User-Agent", "realmdex/1.0"));
     let fetch_fut = async move { Fetch::Request(req).send().await };
     let mut resp = match wait_with_timeout(fetch_fut, TIMEOUT_MS).await {
         Some(Ok(r)) => r,
-        _ => return (id, 0, 0),
+        Some(Err(e)) => {
+            console_log!("[poll id={id}] fetch error for {host}: {e:?}");
+            return (id, 0, 0);
+        }
+        None => {
+            console_log!("[poll id={id}] timeout for {host}");
+            return (id, 0, 0);
+        }
     };
     if resp.status_code() != 200 {
+        let body = resp.text().await.unwrap_or_default();
+        console_log!("[poll id={id}] {host} returned status {} body={}", resp.status_code(), &body[..body.len().min(200)]);
         return (id, 0, 0);
     }
     let body = match resp.text().await {
         Ok(s) => s,
-        Err(_) => return (id, 0, 0),
+        Err(e) => {
+            console_log!("[poll id={id}] body read error for {host}: {e:?}");
+            return (id, 0, 0);
+        }
     };
     let players: i64 = body.trim().parse().unwrap_or(0);
     (id, 1, players)
