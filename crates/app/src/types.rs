@@ -47,6 +47,7 @@ pub struct ServerCardData {
     pub peak_24h: i32,
     pub uptime_14d: Vec<DailyUptime>, // newest first; up to 14 entries
     pub sparkline: Vec<SparkPoint>,   // ~60 points covering the last hour
+    pub secure: bool,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]

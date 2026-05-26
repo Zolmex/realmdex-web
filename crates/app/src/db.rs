@@ -8,6 +8,7 @@ struct ServerRow {
     name: String,
     icon_path: Option<String>,
     discord_link: Option<String>,
+    host: String,
     is_wip: i64,
 }
 
@@ -72,7 +73,7 @@ pub async fn list_servers_in_category(
     let cat = category.as_db_str();
 
     let servers: Vec<ServerRow> = db
-        .prepare("SELECT id, name, icon_path, discord_link, is_wip FROM servers WHERE category = ?1 ORDER BY id")
+        .prepare("SELECT id, name, icon_path, discord_link, host, is_wip FROM servers WHERE category = ?1 ORDER BY id")
         .bind(&[JsValue::from_str(cat)])?
         .all()
         .await?
@@ -166,6 +167,8 @@ pub async fn list_servers_in_category(
             })
             .collect();
 
+        let secure = s.host.starts_with("https://");
+
         out.push(ServerCardData {
             id: s.id,
             name: s.name,
@@ -176,6 +179,7 @@ pub async fn list_servers_in_category(
             peak_24h: peak,
             uptime_14d,
             sparkline,
+            secure,
         });
     }
     Ok(out)

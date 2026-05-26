@@ -3,6 +3,7 @@
 
 # Database and Data
 /data/
+/legacy/
 *.db
 *.sqlite
 

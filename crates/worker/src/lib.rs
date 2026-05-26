@@ -302,11 +302,12 @@ const CLIENT_CONTROLLER: &str = r#"
     var linkText = (s.link||'').indexOf('discord') >= 0 ? 'Join Discord' : 'Visit Homepage';
     var players = isWip ? '-' : String(s.current_players);
     var peak = isWip ? '-' : String(s.peak_24h);
-    var html = '<div class="server-card" data-server-id="'+s.id+'">'
+    var insecureBadge = s.secure ? '' : '<span class="insecure-badge" title="This server has a non-HTTPS API in 2026">&#9888; HTTP</span>';
+    var html = '<div class="server-card' + (s.secure ? '' : ' insecure') + '" data-server-id="'+s.id+'">'
       + '<div class="card-header">'
         + '<img src="'+esc(s.icon_path)+'" alt="'+esc(s.name)+'" class="server-icon" data-discord="'+esc(s.link)+'"/>'
         + '<div class="server-info">'
-          + '<h3 class="server-name">'+esc(s.name)+'</h3>'
+          + '<h3 class="server-name">'+esc(s.name)+insecureBadge+'</h3>'
           + '<a href="'+esc(s.link)+'" class="server-discord" target="_blank" rel="noopener noreferrer">'+linkText+'</a>'
         + '</div>'
         + '<div class="status-container">'
