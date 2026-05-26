@@ -4,12 +4,10 @@ edition.workspace = true
 version.workspace = true
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [dependencies]
 leptos = { version = "0.8" }
-leptos_meta = { version = "0.8" }
-leptos_router = { version = "0.8" }
 serde = { version = "1", features = ["derive"] }
 wasm-bindgen = { version = "0.2", optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
@@ -24,7 +22,5 @@ hydrate = [
 ]
 ssr = [
     "leptos/ssr",
-    "leptos_meta/ssr",
-    "leptos_router/ssr",
     "dep:worker",
 ]
