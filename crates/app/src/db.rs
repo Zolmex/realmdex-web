@@ -234,20 +234,28 @@ pub async fn get_server_admin(db: &D1Database, id: i64) -> worker::Result<Option
     Ok(rows.into_iter().next().map(admin_row_to_type))
 }
 
-pub async fn create_server(db: &D1Database, input: &crate::types::ServerInput) -> worker::Result<crate::types::AdminServerRow> {
-    db.prepare(
-        "INSERT INTO servers (name, icon_path, discord_link, host, category, is_wip, polled)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"
-    )
-    .bind(&[
+fn bool_js(b: bool) -> JsValue {
+    JsValue::from_f64(if b { 1.0 } else { 0.0 })
+}
+
+fn server_input_binds(input: &crate::types::ServerInput) -> Vec<JsValue> {
+    vec![
         JsValue::from_str(&input.name),
         JsValue::from_str(input.icon_path.as_deref().unwrap_or("")),
         JsValue::from_str(input.discord_link.as_deref().unwrap_or("")),
         JsValue::from_str(&input.host),
         JsValue::from_str(input.category.as_db_str()),
-        JsValue::from_f64(if input.is_wip { 1.0 } else { 0.0 }),
-        JsValue::from_f64(if input.polled { 1.0 } else { 0.0 }),
-    ])?
+        bool_js(input.is_wip),
+        bool_js(input.polled),
+    ]
+}
+
+pub async fn create_server(db: &D1Database, input: &crate::types::ServerInput) -> worker::Result<crate::types::AdminServerRow> {
+    db.prepare(
+        "INSERT INTO servers (name, icon_path, discord_link, host, category, is_wip, polled)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"
+    )
+    .bind(&server_input_binds(input))?
     .run()
     .await?;
 
@@ -261,20 +269,13 @@ pub async fn create_server(db: &D1Database, input: &crate::types::ServerInput) -
 }
 
 pub async fn update_server(db: &D1Database, id: i64, input: &crate::types::ServerInput) -> worker::Result<Option<crate::types::AdminServerRow>> {
+    let mut binds = server_input_binds(input);
+    binds.push(JsValue::from_f64(id as f64));
     db.prepare(
         "UPDATE servers SET name = ?1, icon_path = ?2, discord_link = ?3, host = ?4, category = ?5, is_wip = ?6, polled = ?7
          WHERE id = ?8"
     )
-    .bind(&[
-        JsValue::from_str(&input.name),
-        JsValue::from_str(input.icon_path.as_deref().unwrap_or("")),
-        JsValue::from_str(input.discord_link.as_deref().unwrap_or("")),
-        JsValue::from_str(&input.host),
-        JsValue::from_str(input.category.as_db_str()),
-        JsValue::from_f64(if input.is_wip { 1.0 } else { 0.0 }),
-        JsValue::from_f64(if input.polled { 1.0 } else { 0.0 }),
-        JsValue::from_f64(id as f64),
-    ])?
+    .bind(&binds)?
     .run()
     .await?;
 
@@ -282,10 +283,13 @@ pub async fn update_server(db: &D1Database, id: i64, input: &crate::types::Serve
 }
 
 pub async fn delete_server(db: &D1Database, id: i64) -> worker::Result<bool> {
+    // D1 doesn't enforce PRAGMA foreign_keys per-connection, so CASCADE won't fire
+    let id_bind = [JsValue::from_f64(id as f64)];
+    db.prepare("DELETE FROM server_polls WHERE server_id = ?1")
+        .bind(&id_bind)?.run().await?;
+    db.prepare("DELETE FROM server_polls_daily WHERE server_id = ?1")
+        .bind(&id_bind)?.run().await?;
     db.prepare("DELETE FROM servers WHERE id = ?1")
-        .bind(&[JsValue::from_f64(id as f64)])?
-        .run()
-        .await?;
-
+        .bind(&id_bind)?.run().await?;
     Ok(true)
 }

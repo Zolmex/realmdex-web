@@ -9,6 +9,35 @@ mod poller;
 mod rollup;
 mod security;
 
+pub(crate) fn safe_json<T: serde::Serialize>(val: &T) -> String {
+    // "</" -> "<\/" prevents </script> breakout in embedded JSON
+    serde_json::to_string(val).unwrap_or_default().replace("</", "<\\/")
+}
+
+pub(crate) fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+     .replace('<', "&lt;")
+     .replace('>', "&gt;")
+     .replace('"', "&quot;")
+     .replace('\'', "&#39;")
+}
+
+pub(crate) fn html_shell(title: &str, head_extra: &str, content: &str, data_id: &str, data_json: &str, controller: &str) -> String {
+    format!(
+        "<!DOCTYPE html><html lang=\"en\"><head>\
+            <meta charset=\"utf-8\">\
+            <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\
+            {head_extra}\
+            <title>{title}</title>\
+            <link rel=\"icon\" type=\"image/x-icon\" href=\"/favicon.ico\">\
+            <link rel=\"stylesheet\" href=\"/styles/index.css\">\
+        </head><body>{content}\
+        <script id=\"{data_id}\" type=\"application/json\">{data_json}</script>\
+        <script>{controller}</script>\
+        </body></html>"
+    )
+}
+
 #[event(scheduled)]
 async fn scheduled(event: ScheduledEvent, env: Env, _ctx: ScheduleContext) {
     console_error_panic_hook::set_once();
@@ -34,14 +63,20 @@ where
 {
     let body: B = match req.json().await {
         Ok(b) => b,
-        Err(e) => return Ok(security::add_cors(Response::error(format!("bad json: {e}"), 400)?)),
+        Err(e) => {
+            console_log!("bad json: {e}");
+            return Ok(security::add_cors(Response::error("invalid request", 400)?));
+        }
     };
     let owner = Owner::new();
     owner.set();
     provide_context(env);
     match f(body).await {
         Ok(v) => Ok(security::add_cors(Response::from_json(&v)?)),
-        Err(e) => Ok(security::add_cors(Response::error(format!("server fn error: {e}"), 500)?)),
+        Err(e) => {
+            console_log!("server fn error: {e}");
+            Ok(security::add_cors(Response::error("internal error", 500)?))
+        }
     }
 }
 
@@ -81,28 +116,18 @@ async fn fetch(mut req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .await
         .unwrap_or_default();
     let initial = InitialServers { pserver, realm_like };
-    // serde_json doesn't escape '/', so a DB string containing "</script>" would
-    // break out of the <script> tag. "<\/" is valid JSON and blocks the HTML parser.
-    let initial_json = serde_json::to_string(&initial)
-        .unwrap_or_default()
-        .replace("</", "<\\/");
+    let initial_json = safe_json(&initial);
 
     let owner = Owner::new();
-    let html = owner.with(|| app::App().to_html());
+    let content = owner.with(|| app::App().to_html());
 
-    let body = format!(
-        "<!DOCTYPE html><html lang=\"en\"><head>\
-            <meta charset=\"utf-8\">\
-            <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\
-            <meta name=\"description\" content=\"Track server status, player counts, and uptime for RotMG private servers and Realm-Like games.\">\
-            <title>RealmDex - RotMG Private Server Stats & Uptime</title>\
-            <link rel=\"icon\" type=\"image/x-icon\" href=\"/favicon.ico\">\
-            <link rel=\"stylesheet\" href=\"/styles/index.css\">\
-        </head><body>{html}\
-        <script id=\"initial-data\" type=\"application/json\">{initial_json}</script>\
-        <script>{controller}</script>\
-        </body></html>",
-        controller = CLIENT_CONTROLLER
+    let body = html_shell(
+        "RealmDex - RotMG Private Server Stats & Uptime",
+        "<meta name=\"description\" content=\"Track server status, player counts, and uptime for RotMG private servers and Realm-Like games.\">",
+        &content,
+        "initial-data",
+        &initial_json,
+        CLIENT_CONTROLLER,
     );
     Ok(security::add_cors(Response::from_html(body)?))
 }

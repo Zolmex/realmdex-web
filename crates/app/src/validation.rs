@@ -137,7 +137,7 @@ mod tests {
     #[test]
     fn accepts_http_host() {
         let mut input = valid_input();
-        input.host = "http://localhost:9001/players".into();
+        input.host = "http://203.0.113.1:9001/players".into();
         assert!(validate_server_input(&input).is_ok());
     }
 

@@ -58,8 +58,12 @@ pub fn guard_api(req: &Request) -> std::result::Result<(), Response> {
 }
 
 pub fn add_cors(mut resp: Response) -> Response {
-    let _ = resp.headers_mut().set("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
-    let _ = resp.headers_mut().set("Vary", "Origin");
+    let h = resp.headers_mut();
+    let _ = h.set("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+    let _ = h.set("Vary", "Origin");
+    let _ = h.set("X-Content-Type-Options", "nosniff");
+    let _ = h.set("X-Frame-Options", "DENY");
+    let _ = h.set("Referrer-Policy", "strict-origin-when-cross-origin");
     resp
 }
 
@@ -86,6 +90,7 @@ fn base64url_decode(input: &str) -> Result<Vec<u8>> {
 
 pub async fn guard_admin(req: &Request, env: &Env) -> std::result::Result<String, Response> {
     let host = req.headers().get("Host").ok().flatten().unwrap_or_default();
+    // safe: Cloudflare sets Host from the request URL; can't be spoofed in production
     if host.starts_with("localhost") || host.starts_with("127.0.0.1") {
         return Ok("dev@localhost".into());
     }
@@ -133,17 +138,11 @@ async fn verify_access_jwt(token: &str, env: &Env) -> Result<String> {
         return Err("jwt aud mismatch".into());
     }
 
-    let certs_url = env
-        .var("CF_ACCESS_TEAM_DOMAIN")
-        .map(|v| {
-            format!(
-                "https://{}.cloudflareaccess.com/cdn-cgi/access/certs",
-                v.to_string()
-            )
-        })
-        .unwrap_or_else(|_| {
-            "https://valor.cloudflareaccess.com/cdn-cgi/access/certs".into()
-        });
+    let team_domain = env
+        .secret("CF_ACCESS_TEAM_DOMAIN")
+        .map_err(|_| worker::Error::RustError("CF_ACCESS_TEAM_DOMAIN secret not set".into()))?
+        .to_string();
+    let certs_url = format!("https://{team_domain}.cloudflareaccess.com/cdn-cgi/access/certs");
 
     let certs_req = Request::new(&certs_url, Method::Get)
         .map_err(|e| worker::Error::RustError(format!("certs request: {e}")))?;

@@ -25,19 +25,23 @@ pub async fn run(env: &Env) -> Result<()> {
     let outcomes: Vec<(i64, i64, i64)> =
         join_all(servers.into_iter().map(|s| poll_one(s.id, s.host))).await;
 
-    let mut sql = String::from("INSERT INTO server_polls (server_id, online, players) VALUES ");
-    let mut binds: Vec<JsValue> = Vec::with_capacity(outcomes.len() * 3);
-    for (i, (id, online, players)) in outcomes.iter().enumerate() {
-        if i > 0 {
-            sql.push(',');
+    // D1 caps at 100 bind params per prepared statement
+    const MAX_ROWS: usize = 33;
+    for chunk in outcomes.chunks(MAX_ROWS) {
+        let mut sql = String::from("INSERT INTO server_polls (server_id, online, players) VALUES ");
+        let mut binds: Vec<JsValue> = Vec::with_capacity(chunk.len() * 3);
+        for (i, (id, online, players)) in chunk.iter().enumerate() {
+            if i > 0 {
+                sql.push(',');
+            }
+            let base = i * 3;
+            sql.push_str(&format!("(?{}, ?{}, ?{})", base + 1, base + 2, base + 3));
+            binds.push(JsValue::from_f64(*id as f64));
+            binds.push(JsValue::from_f64(*online as f64));
+            binds.push(JsValue::from_f64(*players as f64));
         }
-        let base = i * 3;
-        sql.push_str(&format!("(?{}, ?{}, ?{})", base + 1, base + 2, base + 3));
-        binds.push(JsValue::from_f64(*id as f64));
-        binds.push(JsValue::from_f64(*online as f64));
-        binds.push(JsValue::from_f64(*players as f64));
+        db.prepare(&sql).bind(&binds)?.run().await?;
     }
-    db.prepare(&sql).bind(&binds)?.run().await?;
     Ok(())
 }
 
