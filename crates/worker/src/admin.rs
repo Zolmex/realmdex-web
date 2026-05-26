@@ -15,17 +15,24 @@ pub async fn handle(req: &mut Request, env: &Env, path: &str, email: &str) -> Re
     handle_page(req, env, path, email).await
 }
 
+async fn parse_and_validate(req: &mut Request) -> std::result::Result<ServerInput, Response> {
+    let input: ServerInput = req.json().await.map_err(|e| {
+        console_log!("bad json: {e}");
+        security::add_cors(Response::error("invalid request", 400).unwrap())
+    })?;
+    validate_server_input(&input)
+        .map_err(|e| security::add_cors(Response::error(e.0, 422).unwrap()))?;
+    Ok(input)
+}
+
 async fn handle_api(req: &mut Request, env: &Env, path: &str, email: &str) -> Result<Response> {
     let db = env.d1("DB")?;
 
     if path == "/api/admin/servers" && req.method() == Method::Post {
-        let input: ServerInput = match req.json().await {
-            Ok(b) => b,
-            Err(e) => return Ok(security::add_cors(Response::error(format!("bad json: {e}"), 400)?)),
+        let input = match parse_and_validate(req).await {
+            Ok(i) => i,
+            Err(resp) => return Ok(resp),
         };
-        if let Err(e) = validate_server_input(&input) {
-            return Ok(security::add_cors(Response::error(e.0, 422)?));
-        }
         console_log!("admin: {email} creating server '{}'", input.name);
         let server = db::create_server(&db, &input).await?;
         return Ok(security::add_cors(Response::from_json(&server)?));
@@ -35,13 +42,10 @@ async fn handle_api(req: &mut Request, env: &Env, path: &str, email: &str) -> Re
 
     if let Some(id) = server_id {
         if req.method() == Method::Put {
-            let input: ServerInput = match req.json().await {
-                Ok(b) => b,
-                Err(e) => return Ok(security::add_cors(Response::error(format!("bad json: {e}"), 400)?)),
+            let input = match parse_and_validate(req).await {
+                Ok(i) => i,
+                Err(resp) => return Ok(resp),
             };
-            if let Err(e) = validate_server_input(&input) {
-                return Ok(security::add_cors(Response::error(e.0, 422)?));
-            }
             console_log!("admin: {email} updating server {id}");
             return match db::update_server(&db, id, &input).await? {
                 Some(server) => Ok(security::add_cors(Response::from_json(&server)?)),
@@ -51,11 +55,8 @@ async fn handle_api(req: &mut Request, env: &Env, path: &str, email: &str) -> Re
 
         if req.method() == Method::Delete {
             console_log!("admin: {email} deleting server {id}");
-            return if db::delete_server(&db, id).await? {
-                Ok(security::add_cors(Response::from_json(&serde_json::json!({"deleted": true}))?))
-            } else {
-                Ok(security::add_cors(Response::error("not found", 404)?))
-            };
+            db::delete_server(&db, id).await?;
+            return Ok(security::add_cors(Response::from_json(&serde_json::json!({"deleted": true}))?));
         }
     }
 
@@ -72,7 +73,7 @@ async fn handle_page(_req: &mut Request, env: &Env, path: &str, email: &str) -> 
 
     let (title, content, json) = if path == "/admin" || path == "/admin/" {
         let servers = db::list_servers_admin(&db).await.unwrap_or_default();
-        let json = serde_json::to_string(&servers).unwrap_or_default().replace("</", "<\\/");
+        let json = super::safe_json(&servers);
         let owner = Owner::new();
         let html = owner.with(|| {
             ListPage(ListPageProps {
@@ -86,8 +87,8 @@ async fn handle_page(_req: &mut Request, env: &Env, path: &str, email: &str) -> 
         let server = db::get_server_admin(&db, id).await.unwrap_or(None);
         match server {
             Some(s) => {
-                let title = format!("Admin - Edit {}", s.name);
-                let json = serde_json::to_string(&s).unwrap_or_default().replace("</", "<\\/");
+                let title = format!("Admin - Edit {}", super::html_escape(&s.name));
+                let json = super::safe_json(&s);
                 let owner = Owner::new();
                 let html = owner.with(|| {
                     EditPage(EditPageProps {
@@ -98,24 +99,12 @@ async fn handle_page(_req: &mut Request, env: &Env, path: &str, email: &str) -> 
                 });
                 (title, html, json)
             }
-            None => return Ok(Response::error("server not found", 404)?),
+            None => return Response::error("server not found", 404),
         }
     } else {
-        return Ok(Response::error("not found", 404)?);
+        return Response::error("not found", 404);
     };
 
-    let html = format!(
-        "<!DOCTYPE html><html lang=\"en\"><head>\
-            <meta charset=\"utf-8\">\
-            <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\
-            <title>{title}</title>\
-            <link rel=\"icon\" type=\"image/x-icon\" href=\"/favicon.ico\">\
-            <link rel=\"stylesheet\" href=\"/styles/index.css\">\
-        </head><body>{content}\
-        <script id=\"admin-data\" type=\"application/json\">{json}</script>\
-        <script>{controller}</script>\
-        </body></html>",
-        controller = super::ADMIN_CONTROLLER
-    );
+    let html = super::html_shell(&title, "", &content, "admin-data", &json, super::ADMIN_CONTROLLER);
     Response::from_html(html)
 }
