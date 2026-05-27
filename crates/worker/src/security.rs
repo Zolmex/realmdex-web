@@ -30,15 +30,19 @@ struct JwkKey {
     e: String,
 }
 
+fn is_local_dev(req: &Request) -> bool {
+    let host = req.headers().get("Host").ok().flatten().unwrap_or_default();
+    host == "localhost" || host.starts_with("localhost:")
+        || host == "127.0.0.1" || host.starts_with("127.0.0.1:")
+}
+
 pub fn guard_api(req: &Request) -> std::result::Result<(), Response> {
     let path = req.path();
     if !path.starts_with("/api/") {
         return Ok(());
     }
 
-    let host = req.headers().get("Host").ok().flatten().unwrap_or_default();
-    // safe: on Workers, Cloudflare sets Host from the URL — clients can't spoof it
-    if host.starts_with("localhost") || host.starts_with("127.0.0.1") {
+    if is_local_dev(req) {
         return Ok(());
     }
 
@@ -90,9 +94,7 @@ fn base64url_decode(input: &str) -> Result<Vec<u8>> {
 }
 
 pub async fn guard_admin(req: &Request, env: &Env) -> std::result::Result<String, Response> {
-    let host = req.headers().get("Host").ok().flatten().unwrap_or_default();
-    // safe: Cloudflare sets Host from the request URL; can't be spoofed in production
-    if host.starts_with("localhost") || host.starts_with("127.0.0.1") {
+    if is_local_dev(req) {
         return Ok("dev@localhost".into());
     }
 
