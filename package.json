@@ -1,0 +1,16 @@
+{
+  "name": "realmdex",
+  "private": true,
+  "version": "0.1.0",
+  "description": "RealmDex on Rust + Cloudflare Workers + D1. See README.md.",
+  "scripts": {
+    "dev": "./scripts/build-styles.sh && wrangler dev --local",
+    "build:styles": "./scripts/build-styles.sh",
+    "build:worker": "./scripts/build-worker.sh",
+    "build": "./scripts/build-styles.sh && ./scripts/build-worker.sh",
+    "migrate": "wrangler d1 migrations apply realmdex --local",
+    "import-legacy": "./scripts/import_legacy_db.sh",
+    "tail": "wrangler tail --env production",
+    "deploy:check": "wrangler deploy --env production --dry-run"
+  }
+}

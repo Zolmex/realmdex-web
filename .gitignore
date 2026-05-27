@@ -3,6 +3,7 @@
 
 # Database and Data
 /data/
+/legacy/
 *.db
 *.sqlite
 
@@ -10,6 +11,13 @@
 .env
 .env.local
 .env.auth
+.dev.vars
+!example.env
+
+# Production data dumps
+*.sql
+!migrations/*.sql
+the-real-prod.*
 
 # Docker
 .docker/
@@ -23,3 +31,12 @@
 # OS files
 .DS_Store
 Thumbs.db
+
+# Rust / Cloudflare Workers build artifacts
+/target
+/.wrangler
+/dist
+/node_modules
+/build
+crates/*/build/
+*.wasm

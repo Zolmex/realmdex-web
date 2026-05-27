@@ -1,0 +1,19 @@
+[package]
+name = "app"
+edition.workspace = true
+version.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+leptos = { version = "0.8" }
+serde = { version = "1", features = ["derive"] }
+worker = { version = "0.8", optional = true, features = ["d1"] }
+
+[features]
+default = []
+ssr = [
+    "leptos/ssr",
+    "dep:worker",
+]
