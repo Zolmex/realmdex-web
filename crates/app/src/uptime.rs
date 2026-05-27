@@ -1,3 +1,4 @@
+// keep in sync with uptimeColor() in crates/worker/src/lib.rs CLIENT_CONTROLLER
 pub fn uptime_color(percent: f32) -> String {
     if percent >= 75.0 {
         let green_intensity = (((percent - 75.0) / 25.0) * 255.0).floor() as i32;

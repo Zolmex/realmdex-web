@@ -1,5 +1,7 @@
 use futures::future::join_all;
-use worker::wasm_bindgen::JsValue;
+use worker::js_sys;
+use worker::wasm_bindgen::{JsCast, JsValue};
+use worker::wasm_bindgen_futures;
 use worker::*;
 
 const TIMEOUT_MS: u32 = 10_000;
@@ -92,10 +94,20 @@ where
     use futures::future::{select, Either};
     use futures::FutureExt;
 
-    let timer = gloo_timers::future::TimeoutFuture::new(ms).fuse();
+    let timer = timeout_future(ms).fuse();
     futures::pin_mut!(fut, timer);
     match select(fut, timer).await {
         Either::Left((v, _)) => Some(v),
         Either::Right(_) => None,
     }
+}
+
+async fn timeout_future(ms: u32) {
+    let promise = js_sys::Promise::new(&mut |resolve, _| {
+        let set_timeout = js_sys::Reflect::get(&js_sys::global(), &"setTimeout".into())
+            .unwrap()
+            .unchecked_into::<js_sys::Function>();
+        let _ = set_timeout.call2(&JsValue::NULL, &resolve, &JsValue::from(ms));
+    });
+    let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
 }

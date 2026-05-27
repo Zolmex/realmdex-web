@@ -3,6 +3,7 @@ use leptos::prelude::*;
 use crate::types::AdminServerRow;
 
 #[component]
+// server rendered client-side via ADMIN_CONTROLLER JS, not in this template
 pub fn EditPage(email: String, #[allow(unused)] server: AdminServerRow) -> impl IntoView {
     view! {
         <div class="admin-container">

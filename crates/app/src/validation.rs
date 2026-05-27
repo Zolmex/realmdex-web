@@ -10,6 +10,9 @@ pub fn validate_server_input(input: &ServerInput) -> Result<(), ValidationError>
     if input.name.len() > 100 {
         return Err(ValidationError("name must be 100 chars or fewer".into()));
     }
+    if input.host.len() > 2000 {
+        return Err(ValidationError("host must be 2000 chars or fewer".into()));
+    }
     if !input.host.starts_with("http://") && !input.host.starts_with("https://") {
         return Err(ValidationError("host must start with http:// or https://".into()));
     }
@@ -47,6 +50,8 @@ fn extract_host(url: &str) -> Option<&str> {
         .unwrap_or(authority))
 }
 
+// IPv4 only — IPv6 private ranges (fc00::/7, fe80::/10) are not checked.
+// Acceptable since only authenticated admins can set hosts.
 fn is_private_host(host: &str) -> bool {
     let h = host.to_ascii_lowercase();
     if h == "localhost" || h == "[::1]" || h == "0.0.0.0" {
@@ -101,6 +106,16 @@ mod tests {
         assert_eq!(
             validate_server_input(&input),
             Err(ValidationError("name must be 100 chars or fewer".into()))
+        );
+    }
+
+    #[test]
+    fn rejects_long_host() {
+        let mut input = valid_input();
+        input.host = format!("https://example.com/{}", "x".repeat(2000));
+        assert_eq!(
+            validate_server_input(&input),
+            Err(ValidationError("host must be 2000 chars or fewer".into()))
         );
     }
 

@@ -251,6 +251,7 @@ const CLIENT_CONTROLLER: &str = r#"
   var activeCat = 'pserver';
   var activeSort = 'players-desc';
 
+  // keep in sync with uptime_color() in crates/app/src/uptime.rs
   function uptimeColor(p) {
     if (p >= 75) {
       var g = Math.floor(((p - 75) / 25) * 255);
@@ -292,8 +293,9 @@ const CLIENT_CONTROLLER: &str = r#"
     else if (activeSort === 'random') a = shuffle(a);
     return a;
   }
+  var SPARK_W = 120, SPARK_H = 24;
   function svgSparkline(points) {
-    var w = 120, h = 24;
+    var w = SPARK_W, h = SPARK_H;
     if (!points || !points.length) return '<svg class="sparkline" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'"><path d="" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
     if (points.length === 1) {
       var y = h/2;

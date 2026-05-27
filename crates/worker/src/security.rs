@@ -37,6 +37,7 @@ pub fn guard_api(req: &Request) -> std::result::Result<(), Response> {
     }
 
     let host = req.headers().get("Host").ok().flatten().unwrap_or_default();
+    // safe: on Workers, Cloudflare sets Host from the URL — clients can't spoof it
     if host.starts_with("localhost") || host.starts_with("127.0.0.1") {
         return Ok(());
     }

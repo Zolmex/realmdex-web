@@ -106,5 +106,5 @@ async fn handle_page(_req: &mut Request, env: &Env, path: &str, email: &str) -> 
     };
 
     let html = super::html_shell(&title, "", &content, "admin-data", &json, super::ADMIN_CONTROLLER);
-    Response::from_html(html)
+    Ok(security::add_cors(Response::from_html(html)?))
 }
