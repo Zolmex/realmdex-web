@@ -254,14 +254,11 @@ const CLIENT_CONTROLLER: &str = r#"
   var activeSort = 'players-desc';
 
   // keep in sync with uptime_color() in crates/app/src/uptime.rs
+  // red(0%) → yellow(50%) → green(100%)
   function uptimeColor(p) {
-    if (p >= 75) {
-      var g = Math.floor(((p - 75) / 25) * 255);
-      return 'rgb(' + (255 - g) + ', 255, 0)';
-    }
     if (p >= 50) {
-      var b = Math.floor(((p - 50) / 25) * 255);
-      return 'rgb(255, 255, ' + b + ')';
+      var r = Math.floor((1 - (p - 50) / 50) * 255);
+      return 'rgb(' + r + ', 255, 0)';
     }
     if (p > 0) {
       var g = Math.floor((p / 50) * 255);

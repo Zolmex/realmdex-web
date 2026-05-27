@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::types::{Category, DailyUptime, ServerCardData, SparkPoint, Status};
 use worker::wasm_bindgen::JsValue;
 use worker::D1Database;
@@ -132,14 +133,27 @@ pub async fn list_servers_in_category(
         .await?
         .results()?;
 
-    let mut out = Vec::with_capacity(servers.len());
-    for s in servers {
-        let last = last_polls.iter().find(|r| r.server_id == s.id);
-        let peak = peaks
-            .iter()
-            .find(|r| r.server_id == s.id)
-            .and_then(|r| r.peak)
-            .unwrap_or(0) as i32;
+    let poll_map: HashMap<i64, &LastPollRow> = last_polls.iter().map(|r| (r.server_id, r)).collect();
+    let peak_map: HashMap<i64, i32> = peaks.iter().map(|r| (r.server_id, r.peak.unwrap_or(0) as i32)).collect();
+
+    let mut daily_map: HashMap<i64, Vec<DailyUptime>> = HashMap::new();
+    for r in &daily {
+        daily_map.entry(r.server_id).or_default().push(DailyUptime {
+            day: r.day.clone(),
+            uptime_percent: r.uptime_percent as f32,
+        });
+    }
+
+    let mut spark_map: HashMap<i64, Vec<SparkPoint>> = HashMap::new();
+    for r in &sparks {
+        spark_map.entry(r.server_id).or_default().push(SparkPoint {
+            t_unix: r.t_unix,
+            players: r.players as i32,
+        });
+    }
+
+    let out = servers.into_iter().map(|s| {
+        let last = poll_map.get(&s.id);
         let online = last.map(|r| r.online == 1).unwrap_or(false);
         let status = if s.is_wip == 1 {
             Status::Wip
@@ -148,40 +162,19 @@ pub async fn list_servers_in_category(
         } else {
             Status::Offline
         };
-
-        let uptime_14d = daily
-            .iter()
-            .filter(|r| r.server_id == s.id)
-            .map(|r| DailyUptime {
-                day: r.day.clone(),
-                uptime_percent: r.uptime_percent as f32,
-            })
-            .collect();
-
-        let sparkline = sparks
-            .iter()
-            .filter(|r| r.server_id == s.id)
-            .map(|r| SparkPoint {
-                t_unix: r.t_unix,
-                players: r.players as i32,
-            })
-            .collect();
-
-        let secure = s.host.starts_with("https://");
-
-        out.push(ServerCardData {
+        ServerCardData {
             id: s.id,
             name: s.name,
             icon_path: s.icon_path.unwrap_or_default(),
             link: s.discord_link.unwrap_or_default(),
             status,
             current_players: last.map(|r| r.players as i32).unwrap_or(0),
-            peak_24h: peak,
-            uptime_14d,
-            sparkline,
-            secure,
-        });
-    }
+            peak_24h: *peak_map.get(&s.id).unwrap_or(&0),
+            uptime_14d: daily_map.remove(&s.id).unwrap_or_default(),
+            sparkline: spark_map.remove(&s.id).unwrap_or_default(),
+            secure: s.host.starts_with("https://"),
+        }
+    }).collect();
     Ok(out)
 }
 
