@@ -87,7 +87,7 @@ async fn handle_page(_req: &mut Request, env: &Env, path: &str, email: &str) -> 
         let server = db::get_server_admin(&db, id).await.unwrap_or(None);
         match server {
             Some(s) => {
-                let title = format!("Admin - Edit {}", super::html_escape(&s.name));
+                let title = format!("Admin - Edit {}", s.name);
                 let json = super::safe_json(&s);
                 let owner = Owner::new();
                 let html = owner.with(|| {

@@ -23,16 +23,18 @@ pub(crate) fn html_escape(s: &str) -> String {
 }
 
 pub(crate) fn html_shell(title: &str, head_extra: &str, content: &str, data_id: &str, data_json: &str, controller: &str) -> String {
+    let safe_title = html_escape(title);
+    let safe_data_id = html_escape(data_id);
     format!(
         "<!DOCTYPE html><html lang=\"en\"><head>\
             <meta charset=\"utf-8\">\
             <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\
             {head_extra}\
-            <title>{title}</title>\
+            <title>{safe_title}</title>\
             <link rel=\"icon\" type=\"image/x-icon\" href=\"/favicon.ico\">\
             <link rel=\"stylesheet\" href=\"/styles/index.css\">\
         </head><body>{content}\
-        <script id=\"{data_id}\" type=\"application/json\">{data_json}</script>\
+        <script id=\"{safe_data_id}\" type=\"application/json\">{data_json}</script>\
         <script>{controller}</script>\
         </body></html>"
     )
@@ -322,6 +324,7 @@ const CLIENT_CONTROLLER: &str = r#"
     return html + '</div>';
   }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+  function safeUrl(s){ s=String(s==null?'':s).trim(); if(s===''||s[0]==='/'||s.lastIndexOf('https://',0)===0||s.lastIndexOf('http://',0)===0) return s; return ''; }
   function renderCard(s) {
     var status = s.status;
     var isWip = status === 'wip';
@@ -330,12 +333,14 @@ const CLIENT_CONTROLLER: &str = r#"
     var players = isWip ? '-' : String(s.current_players);
     var peak = isWip ? '-' : String(s.peak_24h);
     var insecureBadge = s.secure ? '' : '<span class="insecure-badge" title="This server has a non-HTTPS API in 2026">&#9888; HTTP</span>';
+    var iconUrl = safeUrl(s.icon_path);
+    var linkUrl = safeUrl(s.link);
     var html = '<div class="server-card' + (s.secure ? '' : ' insecure') + '" data-server-id="'+s.id+'">'
       + '<div class="card-header">'
-        + '<img src="'+esc(s.icon_path)+'" alt="'+esc(s.name)+'" class="server-icon" data-discord="'+esc(s.link)+'"/>'
+        + '<img src="'+esc(iconUrl)+'" alt="'+esc(s.name)+'" class="server-icon" data-discord="'+esc(s.link)+'"/>'
         + '<div class="server-info">'
           + '<h3 class="server-name">'+esc(s.name)+insecureBadge+'</h3>'
-          + '<a href="'+esc(s.link)+'" class="server-discord" target="_blank" rel="noopener noreferrer">'+linkText+'</a>'
+          + '<a href="'+esc(linkUrl)+'" class="server-discord" target="_blank" rel="noopener noreferrer">'+linkText+'</a>'
         + '</div>'
         + '<div class="status-container">'
           + '<div class="status-indicator '+status+'" title="'+statusText+'"></div>'
