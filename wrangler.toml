@@ -16,8 +16,8 @@ command = "bash scripts/build-worker.sh"
 
 [triggers]
 crons = [
-  "*/1 * * * *",   # poller every minute
-  "30 3 * * *",    # rollup daily at 03:30 UTC (placeholder, implemented in Task 15)
+  "*/5 * * * *",   # poller every 5 min (keeps D1 writes well within the free plan)
+  "30 3 * * *",    # rollup daily at 03:30 UTC
 ]
 
 [assets]

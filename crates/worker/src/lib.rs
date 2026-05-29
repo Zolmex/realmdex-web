@@ -9,6 +9,22 @@ mod poller;
 mod rollup;
 mod security;
 
+// reads can't change faster than the 5-min poll cron, so cache them at the edge for that long.
+// s-maxage caches at Cloudflare's edge; max-age=0 keeps browsers revalidating so the page stays live-ish.
+const READ_CACHE_CONTROL: &str = "public, s-maxage=300, max-age=0";
+
+async fn cache_hit(key: &str) -> Option<Response> {
+    Cache::default().get(key, true).await.ok().flatten()
+}
+
+async fn cache_and_serve(key: &str, mut resp: Response) -> Response {
+    let _ = resp.headers_mut().set("Cache-Control", READ_CACHE_CONTROL);
+    if let Ok(clone) = resp.cloned() {
+        let _ = Cache::default().put(key.to_string(), clone).await;
+    }
+    resp
+}
+
 pub(crate) fn safe_json<T: serde::Serialize>(val: &T) -> String {
     // "</" -> "<\/" prevents </script> breakout in embedded JSON
     serde_json::to_string(val).unwrap_or_default().replace("</", "<\\/")
@@ -44,7 +60,7 @@ pub(crate) fn html_shell(title: &str, head_extra: &str, content: &str, data_id: 
 async fn scheduled(event: ScheduledEvent, env: Env, _ctx: ScheduleContext) {
     console_error_panic_hook::set_once();
     let cron = event.cron();
-    let res = if cron.starts_with("*/1") {
+    let res = if cron.starts_with("*/5") {
         poller::run(&env).await
     } else if cron.starts_with("30 3") {
         rollup::run(&env).await
@@ -101,13 +117,42 @@ async fn fetch(mut req: Request, env: Env, _ctx: Context) -> Result<Response> {
     if path == "/api/list_servers" && req.method() == Method::Post {
         #[derive(serde::Deserialize)]
         struct Body { category: Category }
-        return json_api(&mut req, env, |b: Body| list_servers(b.category)).await;
+        let body: Body = match req.json().await {
+            Ok(b) => b,
+            Err(e) => {
+                console_log!("bad json: {e}");
+                return Ok(security::add_cors(Response::error("invalid request", 400)?));
+            }
+        };
+        let key = format!("https://realmdex.com/__cache/list_servers?cat={}", body.category.as_db_str());
+        if let Some(hit) = cache_hit(&key).await {
+            return Ok(hit);
+        }
+        let owner = Owner::new();
+        owner.set();
+        provide_context(env);
+        let resp = match list_servers(body.category).await {
+            Ok(v) => security::add_cors(Response::from_json(&v)?),
+            Err(e) => {
+                console_log!("server fn error: {e}");
+                return Ok(security::add_cors(Response::error("internal error", 500)?));
+            }
+        };
+        return Ok(cache_and_serve(&key, resp).await);
     }
 
     if path == "/api/server_sparkline" && req.method() == Method::Post {
         #[derive(serde::Deserialize)]
         struct Body { server_id: i64 }
         return json_api(&mut req, env, |b: Body| server_sparkline(b.server_id)).await;
+    }
+
+    let is_get = req.method() == Method::Get;
+    let ssr_key = "https://realmdex.com/__cache/ssr";
+    if is_get {
+        if let Some(hit) = cache_hit(ssr_key).await {
+            return Ok(hit);
+        }
     }
 
     let db = env.d1("DB")?;
@@ -131,7 +176,12 @@ async fn fetch(mut req: Request, env: Env, _ctx: Context) -> Result<Response> {
         &initial_json,
         CLIENT_CONTROLLER,
     );
-    Ok(security::add_cors(Response::from_html(body)?))
+    let resp = security::add_cors(Response::from_html(body)?);
+    // don't cache an empty render from a transient D1 outage for the full TTL
+    if is_get && (!initial.pserver.is_empty() || !initial.realm_like.is_empty()) {
+        return Ok(cache_and_serve(ssr_key, resp).await);
+    }
+    Ok(resp)
 }
 
 const ADMIN_CONTROLLER: &str = r#"
@@ -413,7 +463,7 @@ const CLIENT_CONTROLLER: &str = r#"
   });
   var sel = document.getElementById('sort-select');
   if (sel) sel.addEventListener('change', function(){ activeSort = sel.value; renderGrid(); });
-  setInterval(refetch, 30000);
+  setInterval(refetch, 60000);
   renderGrid();
 })();
 "#;
