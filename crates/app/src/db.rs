@@ -84,11 +84,19 @@ pub async fn list_servers_in_category(
         return Ok(Vec::new());
     }
 
+    // drive the correlation from the small servers table so each lookup is a single
+    // index seek to the tail of (server_id, time) — not a full scan of server_polls
     let last_polls: Vec<LastPollRow> = db
         .prepare(
-            "SELECT server_id, players, online FROM server_polls p
-             WHERE id = (SELECT MAX(id) FROM server_polls WHERE server_id = p.server_id)
-               AND server_id IN (SELECT id FROM servers WHERE category = ?1)",
+            "SELECT p.server_id, p.players, p.online
+             FROM servers s
+             JOIN server_polls p ON p.id = (
+                 SELECT id FROM server_polls
+                 WHERE server_id = s.id
+                 ORDER BY time DESC, id DESC
+                 LIMIT 1
+             )
+             WHERE s.category = ?1",
         )
         .bind(&[JsValue::from_str(cat)])?
         .all()

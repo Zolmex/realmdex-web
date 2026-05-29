@@ -11,7 +11,8 @@ pub async fn run(env: &Env) -> Result<()> {
                 SUM(online) AS up_checks,
                 MAX(players) AS peak_players
          FROM server_polls
-         WHERE date(time) = date('now', '-1 day')
+         WHERE time >= datetime('now', 'start of day', '-1 day')
+           AND time <  datetime('now', 'start of day')
          GROUP BY server_id, date(time)
          ON CONFLICT(server_id, day) DO UPDATE SET
            total_checks = excluded.total_checks,
